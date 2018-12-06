@@ -231,7 +231,7 @@ class CCGProcessor(DataProcessor):
           InputExample(guid=guid, text_a=text_a, label=label))
     return examples, true_labels
 
-  def get_labels(self):
+  def get_labels(self, data_dir):
     """See base class."""
     lines = self._read_tsv(os.path.join(data_dir, "supertags.tsv"))
     labels = []
