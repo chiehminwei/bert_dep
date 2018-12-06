@@ -300,15 +300,16 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   orig_tokens = example.text_a.split(',')
   bert_tokens = []
   # Token map will be an int -> int mapping between the `orig_tokens` index and the `bert_tokens` index.
-  # token_start_idxs = []
+  token_start_idxs = []
   token_start_mask = [0] * max_seq_length
 
   bert_tokens.append("[CLS]")
   for orig_token in orig_tokens:
-    token_start_mask[len(bert_tokens)] = 1
-    # token_start_idxs.append(len(bert_tokens))
+    token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(tokenizer.tokenize(orig_token))
   bert_tokens.append("[SEP]")
+  for start_idx =in token_start_idxs:
+    token_start_mask[start_idx] = 1
 
   # The mask has 1 for real tokens and 0 for padding tokens. Only real
   # tokens are attended to.
