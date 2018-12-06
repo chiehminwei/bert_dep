@@ -483,6 +483,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   with tf.variable_scope("loss"):
       input_mask = tf.to_float(input_mask)
+      token_start_mask = tf.to_float(token_start_mask)
 
       final_hidden_matrix = tf.reshape(final_hidden, [batch_size * seq_length, hidden_size])
       logits = tf.matmul(final_hidden_matrix, output_weights, transpose_b = True)
