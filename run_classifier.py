@@ -246,7 +246,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   for (i, label) in enumerate(label_list):
     label_map[label] = i
 
-  tokens_a = tokenizer.tokenize(example.text_a)
+  tokens_a = tokenizer.tokenize(' '.join(example.text_a.split(',')))
   tokens_b = None
   if example.text_b:
     tokens_b = tokenizer.tokenize(example.text_b)
@@ -329,6 +329,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   # change label to list
   label_id = []
   label_id.append(0)
+  tf.logging.info(example_label)
   label_id.extend( [label_map[label_] for label_ in example.label.split(',')] )
   
   if len(label_id) > max_seq_length:
