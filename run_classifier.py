@@ -305,7 +305,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
 
   bert_tokens.append("[CLS]")
   for orig_token in orig_tokens:
-    token_start_mask[len(bert_tokens)] = 1
+    token_start_mask[0, len(bert_tokens)] = 1
     # token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(tokenizer.tokenize(orig_token))
   bert_tokens.append("[SEP]")
