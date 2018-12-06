@@ -330,7 +330,6 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   # change label to list
   label_id = []
   label_id.append(0)
-  tf.logging.info(example.label)
   label_id.extend( [label_map[label_] for label_ in example.label.split()] )
   
   if len(label_id) > max_seq_length:
