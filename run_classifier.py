@@ -195,9 +195,9 @@ class CCGProcessor(DataProcessor):
       words = []
       labels = []
       for unit in line:
-        idx = unit.find('|')
-        word = unit[:idx]
-        label = unit[idx+1:]
+        split = unit.split('|')
+        word = split[0]
+        label = split[-1].strip()
         words.append(word)
         labels.append(label)
 
@@ -217,9 +217,9 @@ class CCGProcessor(DataProcessor):
       words = []
       labels = []
       for unit in line:
-        idx = unit.find('|')
-        word = unit[:idx]
-        label = unit[idx+1:]
+        split = unit.split('|')
+        word = split[0]
+        label = split[-1].strip()
         words.append(word)
         labels.append(label)
 
