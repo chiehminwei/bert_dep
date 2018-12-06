@@ -305,6 +305,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
 
   bert_tokens.append("[CLS]")
   for orig_token in orig_tokens:
+    print(bert_tokens)
     print(len(bert_tokens))
     print(token_start_idxs)
     print(bert_tokens)
