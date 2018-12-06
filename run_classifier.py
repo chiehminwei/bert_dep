@@ -503,7 +503,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
   with tf.variable_scope("loss"):
-      input_mask = tf.expand_dims(tf.to_float(input_mask), -1)
+      input_mask = tf.to_float(input_mask)
       token_start_mask = tf.expand_dims(tf.to_float(token_start_mask), -1)
 
       final_hidden_matrix = tf.reshape(final_hidden, [batch_size * seq_length, hidden_size])
@@ -516,9 +516,11 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
       
       log_probs = tf.nn.log_softmax(logits, axis=-1)
-      per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs * input_mask * token_start_mask, axis=-1)
+
+      _input_mask = tf.expand_dims(input_mask, -1)
+      per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs * _input_mask * token_start_mask, axis=-1)
       # loss = tf.reduce_mean(per_example_loss)
-      logits = logits * input_mask * token_start_mask
+      logits = logits * _input_mask * token_start_mask
   
   return (loss, per_example_loss, logits)
 
