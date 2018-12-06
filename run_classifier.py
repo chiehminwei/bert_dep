@@ -202,8 +202,8 @@ class CCGProcessor(DataProcessor):
         labels.append(label)
 
       guid = "train-%d" % (i)
-      text_a = tokenization.convert_to_unicode(','.join(words))
-      label = tokenization.convert_to_unicode(','.join(labels))
+      text_a = tokenization.convert_to_unicode(' '.join(words))
+      label = tokenization.convert_to_unicode(' '.join(labels))
       examples.append(
           InputExample(guid=guid, text_a=text_a, label=label))
     return examples
@@ -298,7 +298,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   
   input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-  orig_tokens = example.text_a.split(',')
+  orig_tokens = example.text_a.split()
   bert_tokens = []
   # Token map will be an int -> int mapping between the `orig_tokens` index and the `bert_tokens` index.
   token_start_idxs = []
@@ -330,7 +330,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   label_id = []
   label_id.append(0)
   tf.logging.info(example.label)
-  label_id.extend( [label_map[label_] for label_ in example.label.split(',')] )
+  label_id.extend( [label_map[label_] for label_ in example.label.split()] )
   
   if len(label_id) > max_seq_length:
       label_id = label_id[:max_seq_length]
