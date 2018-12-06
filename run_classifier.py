@@ -312,7 +312,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(tokenizer.tokenize(orig_token))
   bert_tokens.append("[SEP]")
-  for start_idx =in token_start_idxs:
+  for start_idx in token_start_idxs:
     token_start_mask[start_idx] = 1
 
   # The mask has 1 for real tokens and 0 for padding tokens. Only real
