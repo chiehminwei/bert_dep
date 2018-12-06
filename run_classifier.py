@@ -310,6 +310,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     bert_tokens.extend(tokenizer.tokenize(orig_token))
   bert_tokens.append("[SEP]")
   for start_idx in token_start_idxs:
+    if start_idx >= max_seq_length: break
     token_start_mask[start_idx] = 1
 
   # The mask has 1 for real tokens and 0 for padding tokens. Only real
@@ -347,7 +348,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("label: %s (id = %s)" % (example.label, ",".join([str(x) for x in label_id])))
+    tf.logging.info("label: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_id])))
 
   feature = InputFeatures(
       input_ids=input_ids,
