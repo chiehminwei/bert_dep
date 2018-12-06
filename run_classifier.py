@@ -322,6 +322,16 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   # tokens are attended to.
   input_mask = [1] * len(input_ids)
 
+  tf.logging.info("input_ids: %s" % str(len(input_ids)))
+  tf.logging.info("label_id: %s" % str(len(label_id)))
+  tf.logging.info("input_mask: %s" % str(len(input_mask)))
+  tf.logging.info("segment_ids: %s" % str(len(segment_ids)))
+
+  tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+  tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
+  tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+  tf.logging.info("label: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_id])))
+
   assert len(input_ids) == len(label_id) == len(input_mask) == len(segment_ids)
   if len(input_ids) > max_seq_length:
       input_ids = input_ids[:max_seq_length]
