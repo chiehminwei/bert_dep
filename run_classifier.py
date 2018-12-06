@@ -490,7 +490,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       logits = tf.reshape(logits, [batch_size, seq_length, num_labels])
       #logits = tf.transpose(logits, [2,0,1])
       one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
-      input_mask = input_mask.reshape((-1,1))
+      #input_mask = input_mask.reshape((-1,1))
       loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
       
       log_probs = tf.nn.log_softmax(logits, axis=-1)
