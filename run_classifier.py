@@ -147,11 +147,11 @@ class InputExample(object):
 class InputFeatures(object):
   """A single set of features of data."""
 
-  def __init__(self, input_ids, input_mask, segment_ids, label_id, token_start_mask):
+  def __init__(self, input_ids, input_mask, segment_ids, label_ids, token_start_mask):
     self.input_ids = input_ids
     self.input_mask = input_mask
     self.segment_ids = segment_ids
-    self.label_id = label_id
+    self.label_ids = label_ids
     self.token_start_mask = token_start_mask
     # self.bert_tokens = bert_tokens
     # self.token_start_idxs = token_start_idxs
@@ -298,7 +298,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   
   input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-  label_id = []
+  label_ids = []
   orig_tokens = example.text_a.split()
   labels = example.label.split()
   bert_tokens = []
@@ -307,49 +307,40 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   token_start_mask = [0] * max_seq_length
 
   bert_tokens.append("[CLS]")
-  label_id.append(0)
+  label_ids.append(0)
   for orig_token, label in zip(orig_tokens, labels):
     sub_tokens = tokenizer.tokenize(orig_token)
-    label_id.extend([label_map[label]] * len(sub_tokens))
+    label_ids.extend([label_map[label]] * len(sub_tokens))
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
   bert_tokens.append("[SEP]")
+  label_ids.append(0)
   for start_idx in token_start_idxs:
     if start_idx >= max_seq_length: break
     token_start_mask[start_idx] = 1
-
+  
   # The mask has 1 for real tokens and 0 for padding tokens. Only real
   # tokens are attended to.
   input_mask = [1] * len(input_ids)
 
-  tf.logging.info("input_ids: %s" % str(len(input_ids)))
-  tf.logging.info("label_id: %s" % str(len(label_id)))
-  tf.logging.info("input_mask: %s" % str(len(input_mask)))
-  tf.logging.info("segment_ids: %s" % str(len(segment_ids)))
-
-  tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-  tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-  tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-  tf.logging.info("label: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_id])))
-
-  assert len(input_ids) == len(label_id) == len(input_mask) == len(segment_ids)
+  assert len(input_ids) == len(label_ids) == len(input_mask) == len(segment_ids)
   if len(input_ids) > max_seq_length:
       input_ids = input_ids[:max_seq_length]
-      label_id = label_id[:max_seq_length]
+      label_ids = label_ids[:max_seq_length]
       input_mask = input_mask[:max_seq_length]
       segment_ids = segment_ids[:max_seq_length]
 
   # Zero-pad up to the sequence length.
   while len(input_ids) < max_seq_length:
     input_ids.append(0)
-    label_id.append(0)
+    label_ids.append(0)
     input_mask.append(0)
     segment_ids.append(0)
 
   assert len(input_ids) == max_seq_length
   assert len(input_mask) == max_seq_length
   assert len(segment_ids) == max_seq_length
-  assert len(label_id) == max_seq_length
+  assert len(label_ids) == max_seq_length
   
   if ex_index < 5:
     tf.logging.info("*** Example ***")
@@ -359,13 +350,13 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("label: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_id])))
+    tf.logging.info("label: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_ids])))
 
   feature = InputFeatures(
       input_ids=input_ids,
       input_mask=input_mask,
       segment_ids=segment_ids,
-      label_id=label_id,
+      label_ids=label_ids,
       token_start_mask=token_start_mask)
       # bert_tokens=bert_tokens,
       # token_start_idxs=token_start_idxs
@@ -392,7 +383,7 @@ def file_based_convert_examples_to_features(
     features["input_ids"] = create_int_feature(feature.input_ids)
     features["input_mask"] = create_int_feature(feature.input_mask)
     features["segment_ids"] = create_int_feature(feature.segment_ids)
-    features["label_ids"] = create_int_feature(feature.label_id)
+    features["label_ids"] = create_int_feature(feature.label_ids)
     features["token_start_mask"] = create_int_feature(feature.token_start_mask)
     # features["bert_tokens"] = create_int_feature(feature.bert_tokens)
     # features["token_start_idxs"] = create_int_feature(feature.token_start_idxs)
