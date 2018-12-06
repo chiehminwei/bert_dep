@@ -306,6 +306,9 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   token_start_idxs = []
   token_start_mask = [0] * max_seq_length
 
+  if len(label_ids) > max_seq_length - 2:
+      tokens_a = tokens_a[0:(max_seq_length - 2)]
+
   bert_tokens.append("[CLS]")
   label_ids.append(0)
   for orig_token, label in zip(orig_tokens, labels):
@@ -313,8 +316,13 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     label_ids.extend([label_map[label]] * len(sub_tokens))
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
+
+  if len(label_ids) > max_seq_length - 1:
+      label_ids = label_ids[0:(max_seq_length - 1)]
+
   bert_tokens.append("[SEP]")
   label_ids.append(0)
+
   for start_idx in token_start_idxs:
     if start_idx >= max_seq_length: break
     token_start_mask[start_idx] = 1
