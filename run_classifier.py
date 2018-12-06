@@ -246,7 +246,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   for (i, label) in enumerate(label_list):
     label_map[label] = i
 
-  tokens_a = tokenizer.tokenize(' '.join(example.text_a.split(',')))
+  tokens_a = tokenizer.tokenize(example.text_a)
   tokens_b = None
   if example.text_b:
     tokens_b = tokenizer.tokenize(example.text_b)
@@ -360,7 +360,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("labels: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_ids])))
+    tf.logging.info("labels;.: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_ids])))
 
   feature = InputFeatures(
       input_ids=input_ids,
