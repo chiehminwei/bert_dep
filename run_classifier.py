@@ -341,7 +341,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   # tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
   # tf.logging.info("labels: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_ids])))
 
-  assert len(input_ids) == len(label_ids) == len(input_mask) == len(segment_ids)
+  assert len(input_ids) == len(label_ids) == len(input_mask) == len(segment_ids), 'input_ids: {}, label_ids: {}'.format(len(input_ids), len(label_ids))
   if len(input_ids) > max_seq_length:
       input_ids = input_ids[:max_seq_length]
       label_ids = label_ids[:max_seq_length]
@@ -368,7 +368,7 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("labels;.: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_ids])))
+    tf.logging.info("labels: %s (id = %s)" % (example.label, " ".join([str(x) for x in label_ids])))
 
   feature = InputFeatures(
       input_ids=input_ids,
@@ -511,7 +511,6 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       logits = tf.nn.bias_add(logits, output_bias)
 
       logits = tf.reshape(logits, [batch_size, seq_length, num_labels])
-      #logits = tf.transpose(logits, [2,0,1])
       one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
       loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
       
@@ -588,7 +587,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     elif mode == tf.estimator.ModeKeys.EVAL:
 
       def metric_fn(per_example_loss, label_ids, logits):
+        mask = tf.greater(label_ids, 0)
+        label_ids = tf.boolean_mask(label_ids, mask)
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+        predictions = tf.boolean_mask(predictions, mask)
         accuracy = tf.metrics.accuracy(label_ids, predictions)
         loss = tf.metrics.mean(per_example_loss)
         return {
@@ -620,6 +622,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
   return model_fn
 
+'''
 # This function is not used by this file but is still used by the Colab and
 # people who depend on it.
 def input_fn_builder(features, seq_length, is_training, drop_remainder):
@@ -690,27 +693,27 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
     features.append(feature)
   return features
 
-# def get_eval(pred_result, real_labels, label_list, max_seq_length):
-#     label_map = {}
-#     for (i, label) in enumerate(label_list):
-#         label_map[label] = i
-#     predictions = list(itertools.islice(pred_result, len(real_labels)))
+def get_eval(pred_result, real_labels, label_list, max_seq_length):
+    label_map = {}
+    for (i, label) in enumerate(label_list):
+        label_map[label] = i
+    predictions = list(itertools.islice(pred_result, len(real_labels)))
     
-#     pred_labels = []
-#     real_labels_ = []
+    pred_labels = []
+    real_labels_ = []
 
-#     for i in range(len(predictions)):
-#         real = real_labels[i]
-#         if len(real) > max_seq_length-1:
-#             continue
-#         real_ = [label_map[l] for l in real]
-#         real_labels_.extend(real_)
+    for i in range(len(predictions)):
+        real = real_labels[i]
+        if len(real) > max_seq_length-1:
+            continue
+        real_ = [label_map[l] for l in real]
+        real_labels_.extend(real_)
          
-#         pred = predictions[i]['values'][1 : len(real_)+1]
-#         pred_labels.extend(pred)
-#         assert len(real_) == len(pred)
-#     print(classification_report(real_labels_, pred_labels))
-
+        pred = predictions[i]['values'][1 : len(real_)+1]
+        pred_labels.extend(pred)
+        assert len(real_) == len(pred)
+    print(classification_report(real_labels_, pred_labels))
+'''
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
