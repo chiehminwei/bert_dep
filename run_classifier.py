@@ -236,7 +236,7 @@ class CCGProcessor(DataProcessor):
     lines = self._read_tsv(os.path.join(data_dir, "supertags.tsv"))
     labels = []
     for line in lines:
-      labels.append(line[0])
+      labels.append(tokenization.convert_to_unicode(line[0]))
     return labels
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
