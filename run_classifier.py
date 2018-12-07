@@ -601,9 +601,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
       # def metric_fn(per_example_loss, label_ids, logits):
       def metric_fn(label_ids, logits, trans, weight):
-        precision = tf_metrics.precision(label_ids, pred_ids, num_labels, weight)
-        recall = tf_metrics.recall(label_ids, pred_ids, num_labels, weight)
-        f = tf_metrics.f1(label_ids, pred_ids, num_labels, weight)
+        #precision = tf_metrics.precision(label_ids, pred_ids, num_labels, weight)
+        #recall = tf_metrics.recall(label_ids, pred_ids, num_labels, weight)
+        #f = tf_metrics.f1(label_ids, pred_ids, num_labels, weight)
         accuracy = tf.metrics.accuracy(label_ids, predictions, weights=weight)
 
         # predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -616,9 +616,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         # loss = tf.metrics.mean(per_example_loss)
         return {
             "eval_accuracy": accuracy,
-            "eval_precision": precision,
-            "eval_recall": recall,
-            "eval_f": f
+            #"eval_precision": precision,
+            #"eval_recall": recall,
+            #"eval_f": f
       #     "eval_loss": loss,
         }
 
