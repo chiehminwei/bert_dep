@@ -606,10 +606,12 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
         # mask = tf.greater(token_start_mask, 0)
+        #token_start_mask = tf.to_float(token_start_mask)
 
         # label_ids = tf.boolean_mask(label_ids, mask)
         # predictions = tf.boolean_mask(predictions, mask)
-        accuracy = tf.metrics.accuracy(label_ids, predictions, weights=token_start_mask)
+        accuracy = tf.metrics.accuracy(label_ids, predictions)
+        #accuracy = tf.metrics.accuracy(label_ids, predictions, weights=token_start_mask)
         loss = tf.metrics.mean(per_example_loss)
         return {
             "eval_accuracy": accuracy,
