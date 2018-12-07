@@ -512,13 +512,13 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
       logits = tf.reshape(logits, [batch_size, seq_length, num_labels])
       one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
-      loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
+      #loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
       
       log_probs = tf.nn.log_softmax(logits, axis=-1)
 
       _input_mask = tf.expand_dims(input_mask, -1)
       per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs * _input_mask * token_start_mask, axis=-1)
-      # loss = tf.reduce_mean(per_example_loss)
+      loss = tf.reduce_mean(per_example_loss)
       logits = logits * _input_mask * token_start_mask
   
   return (loss, per_example_loss, logits)
@@ -590,6 +590,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
         mask = tf.greater(predictions, 0)
+
         label_ids = tf.boolean_mask(label_ids, mask)
         predictions = tf.boolean_mask(predictions, mask)
         accuracy = tf.metrics.accuracy(label_ids, predictions)
