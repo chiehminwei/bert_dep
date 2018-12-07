@@ -28,7 +28,9 @@ import tokenization
 import tensorflow as tf
 import numpy as np
 
-# from lstm_crf_layer import BLSTM_CRF
+from lstm_crf_layer import BLSTM_CRF
+from tensorflow.contrib.layers.python.layers import initializers
+
 # from sklearn.metrics import classification_report
 
 flags = tf.flags
@@ -477,7 +479,8 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-                 labels, num_labels, use_one_hot_embeddings, token_start_mask):
+                 labels, num_labels, use_one_hot_embeddings, token_start_mask,
+                 lstm_size, cell_type, num_layers, dropout_rate):
   """Creates a classification model."""
   model = modeling.BertModel(
       config=bert_config,
@@ -487,53 +490,52 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       token_type_ids=segment_ids,
       use_one_hot_embeddings=use_one_hot_embeddings)
   embedding = model.get_sequence_output()
-  # batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
-  # lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
-  # blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers,
-  #                         dropout_rate=FLAGS.droupout_rate, initializers=initializers, num_labels=num_labels,
-  #                         seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
-  # rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
-  # return rst
+  batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
+  lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
+  blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=lstm_size, cell_type=cell_type, num_layers=num_layers,
+                          dropout_rate=dropout_rate, initializers=initializers, num_labels=num_labels,
+                          seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
+  rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
+  return rst
 
+  # final_hidden = model.get_sequence_output()
+  # final_hidden_shape = modeling.get_shape_list(final_hidden, expected_rank=3)
+  # batch_size = final_hidden_shape[0] 
+  # seq_length = final_hidden_shape[1]
+  # hidden_size = final_hidden_shape[2]
 
-  final_hidden = model.get_sequence_output()
-  final_hidden_shape = modeling.get_shape_list(final_hidden, expected_rank=3)
-  batch_size = final_hidden_shape[0] 
-  seq_length = final_hidden_shape[1]
-  hidden_size = final_hidden_shape[2]
+  # output_weights = tf.get_variable(
+  #     "output_weights", [num_labels, hidden_size],
+  #     initializer=tf.truncated_normal_initializer(stddev=0.02))
 
-  output_weights = tf.get_variable(
-      "output_weights", [num_labels, hidden_size],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
+  # output_bias = tf.get_variable(
+  #     "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
-  output_bias = tf.get_variable(
-      "output_bias", [num_labels], initializer=tf.zeros_initializer())
+  # with tf.variable_scope("loss"):
+  #     input_mask = tf.to_float(input_mask)
+  #     token_start_mask = tf.expand_dims(tf.to_float(token_start_mask), -1)
 
-  with tf.variable_scope("loss"):
-      input_mask = tf.to_float(input_mask)
-      token_start_mask = tf.expand_dims(tf.to_float(token_start_mask), -1)
+  #     final_hidden_matrix = tf.reshape(final_hidden, [batch_size * seq_length, hidden_size])
+  #     logits = tf.matmul(final_hidden_matrix, output_weights, transpose_b = True)
+  #     logits = tf.nn.bias_add(logits, output_bias)
 
-      final_hidden_matrix = tf.reshape(final_hidden, [batch_size * seq_length, hidden_size])
-      logits = tf.matmul(final_hidden_matrix, output_weights, transpose_b = True)
-      logits = tf.nn.bias_add(logits, output_bias)
-
-      logits = tf.reshape(logits, [batch_size, seq_length, num_labels])
-      one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
-      #loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
+  #     logits = tf.reshape(logits, [batch_size, seq_length, num_labels])
+  #     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+  #     #loss = tf.losses.softmax_cross_entropy(one_hot_labels, logits * token_start_mask, weights=input_mask, label_smoothing=0.1)
       
-      log_probs = tf.nn.log_softmax(logits, axis=-1)
+  #     log_probs = tf.nn.log_softmax(logits, axis=-1)
 
-      _input_mask = tf.expand_dims(input_mask, -1)
-      per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs * _input_mask * token_start_mask, axis=-1)
-      loss = tf.reduce_mean(per_example_loss)
-      logits = logits * _input_mask * token_start_mask
+  #     _input_mask = tf.expand_dims(input_mask, -1)
+  #     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs * _input_mask * token_start_mask, axis=-1)
+  #     loss = tf.reduce_mean(per_example_loss)
+  #     logits = logits * _input_mask * token_start_mask
   
-  return (loss, per_example_loss, logits)
+  # return (loss, per_example_loss, logits)
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
-                     use_one_hot_embeddings):
+                     use_one_hot_embeddings, lstm_size, cell_type, num_layers, dropout_rate):
   """Returns `model_fn` closure for TPUEstimator."""
 
   def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -550,13 +552,14 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-    (total_loss, per_example_loss, logits) = create_model(
-        bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
-        num_labels, use_one_hot_embeddings, token_start_mask)
-
-    # (total_loss, logits, trans, pred_ids) = create_model(
+    # (total_loss, per_example_loss, logits) = create_model(
     #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
     #     num_labels, use_one_hot_embeddings, token_start_mask)
+
+    (total_loss, logits, trans, pred_ids) = create_model(
+        bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
+        num_labels, use_one_hot_embeddings, token_start_mask,
+        lstm_size, cell_type, num_layers, dropout_rate)
 
     tvars = tf.trainable_variables()
     initialized_variable_names = {}
@@ -596,48 +599,42 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
           scaffold_fn=scaffold_fn)
     elif mode == tf.estimator.ModeKeys.EVAL:
 
-      def metric_fn(per_example_loss, label_ids, logits):
-      # def metric_fn(label_ids, logits, trans):
-      #   weight = tf.sequence_mask(FLAGS.max_seq_length)
-      #   precision = tf_metrics.precision(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
-      #   recall = tf_metrics.recall(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
-      #   f = tf_metrics.f1(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
+      # def metric_fn(per_example_loss, label_ids, logits):
+      def metric_fn(label_ids, logits, trans, weight):
+        precision = tf_metrics.precision(label_ids, pred_ids, num_labels, weight)
+        recall = tf_metrics.recall(label_ids, pred_ids, num_labels, weight)
+        f = tf_metrics.f1(label_ids, pred_ids, num_labels, weight)
+        accuracy = tf.metrics.accuracy(label_ids, predictions, weights=weight)
 
-        predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-        tf.logging.info("predictions: %s" % " ".join([str(x) for x in predictions.value]))
+        # predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
         # mask = tf.greater(token_start_mask, 0)
-        token_start_mask_ = tf.to_float(token_start_mask)
-
+        # token_start_mask_ = tf.to_float(token_start_mask)
         # label_ids = tf.boolean_mask(label_ids, mask)
         # predictions = tf.boolean_mask(predictions, mask)
         # accuracy = tf.metrics.accuracy(label_ids, predictions)
-        accuracy = tf.metrics.accuracy(label_ids, predictions, weights=token_start_mask_)
-        loss = tf.metrics.mean(per_example_loss)
+        # accuracy = tf.metrics.accuracy(label_ids, predictions, weights=token_start_mask_)
+        # loss = tf.metrics.mean(per_example_loss)
         return {
             "eval_accuracy": accuracy,
-            "eval_loss": loss,
+            "eval_precision": precision,
+            "eval_recall": recall,
+            "eval_f": f
+      #     "eval_loss": loss,
         }
 
-      eval_metrics = (metric_fn, [per_example_loss, label_ids, logits])
+      weight = tf.to_float(token_start_mask)
+      eval_metrics = (metric_fn, [label_ids, logits, trans, weight])
+      # eval_metrics = (metric_fn, [per_example_loss, label_ids, logits])
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode,
           loss=total_loss,
           eval_metrics=eval_metrics,
           scaffold_fn=scaffold_fn)
-    elif mode == tf.estimator.ModeKeys.PREDICT:
-      predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-      predict_output = {'values': predictions}
-      export_outputs = {'predictions':tf.estimator.export.PredictOutput(predict_output)}
-      
+    else:
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
-         predictions=predict_output,
-         export_outputs=export_outputs,
+         predictions=pred_ids,
          scaffold_fn=scaffold_fn)
-
-    else:
-      raise ValueError("Only TRAIN and EVAL modes are supported: %s" % (mode))
-
     return output_spec
 
   return model_fn

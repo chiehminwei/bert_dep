@@ -61,7 +61,7 @@ class BLSTM_CRF(object):
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
         return ((loss, logits, trans, pred_ids))
 
-    def _witch_cell(self):
+    def _which_cell(self):
         """
         RNN 类型
         :return: 
@@ -81,8 +81,8 @@ class BLSTM_CRF(object):
         双向RNN
         :return:
         """
-        cell_fw = self._witch_cell()
-        cell_bw = self._witch_cell()
+        cell_fw = self._which_cell()
+        cell_bw = self._which_cell()
         if self.dropout_rate is not None:
             cell_bw = rnn.DropoutWrapper(cell_bw, output_keep_prob=self.dropout_rate)
             cell_fw = rnn.DropoutWrapper(cell_fw, output_keep_prob=self.dropout_rate)
