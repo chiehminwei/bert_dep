@@ -30,7 +30,7 @@ import numpy as np
 
 from lstm_crf_layer import BLSTM_CRF
 from tensorflow.contrib.layers.python.layers import initializers
-
+import tf_metrics
 # from sklearn.metrics import classification_report
 
 flags = tf.flags
