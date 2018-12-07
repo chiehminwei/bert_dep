@@ -604,7 +604,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         #precision = tf_metrics.precision(label_ids, pred_ids, num_labels, weight)
         #recall = tf_metrics.recall(label_ids, pred_ids, num_labels, weight)
         #f = tf_metrics.f1(label_ids, pred_ids, num_labels, weight)
-        accuracy = tf.metrics.accuracy(label_ids, predictions, weights=weight)
+        accuracy = tf.metrics.accuracy(label_ids, pred_ids, weights=weight)
 
         # predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
         # mask = tf.greater(token_start_mask, 0)
