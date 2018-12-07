@@ -587,9 +587,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     elif mode == tf.estimator.ModeKeys.EVAL:
 
       def metric_fn(per_example_loss, label_ids, logits):
-        mask = tf.greater(label_ids, 0)
-        label_ids = tf.boolean_mask(label_ids, mask)
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+
+        mask = tf.greater(predictions, 0)
+        label_ids = tf.boolean_mask(label_ids, mask)
         predictions = tf.boolean_mask(predictions, mask)
         accuracy = tf.metrics.accuracy(label_ids, predictions)
         loss = tf.metrics.mean(per_example_loss)
