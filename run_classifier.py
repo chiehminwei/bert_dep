@@ -589,7 +589,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
       def metric_fn(per_example_loss, label_ids, logits):
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
-        mask = tf.greater(predictions, 0)
+        mask = tf.greater(token_start_mask, 0)
 
         label_ids = tf.boolean_mask(label_ids, mask)
         predictions = tf.boolean_mask(predictions, mask)
