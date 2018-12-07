@@ -604,7 +604,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
       #   f = tf_metrics.f1(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
 
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-
+        tf.logging.info("predictions: %s" % " ".join([str(x) for x in predictions.value]))
         # mask = tf.greater(token_start_mask, 0)
         token_start_mask_ = tf.to_float(token_start_mask)
 
