@@ -28,6 +28,7 @@ import tokenization
 import tensorflow as tf
 import numpy as np
 
+# from lstm_crf_layer import BLSTM_CRF
 # from sklearn.metrics import classification_report
 
 flags = tf.flags
@@ -484,11 +485,16 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       input_mask=input_mask,
       token_type_ids=segment_ids,
       use_one_hot_embeddings=use_one_hot_embeddings)
-  # In the demo, we are doing a simple classification task on the entire
-  # segment.
-  #
-  # If you want to use the token-level output, use model.get_sequence_output()
-  # instead.
+  embedding = model.get_sequence_output()
+  # batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
+  # lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
+  # blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=FLAGS.lstm_size, cell_type=FLAGS.cell, num_layers=FLAGS.num_layers,
+  #                         dropout_rate=FLAGS.droupout_rate, initializers=initializers, num_labels=num_labels,
+  #                         seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
+  # rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
+  # return rst
+
+
   final_hidden = model.get_sequence_output()
   final_hidden_shape = modeling.get_shape_list(final_hidden, expected_rank=3)
   batch_size = final_hidden_shape[0] 
@@ -546,7 +552,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     (total_loss, per_example_loss, logits) = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
         num_labels, use_one_hot_embeddings, token_start_mask)
-    
+
+    # (total_loss, logits, trans, pred_ids) = create_model(
+    #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
+    #     num_labels, use_one_hot_embeddings, token_start_mask)
 
     tvars = tf.trainable_variables()
     initialized_variable_names = {}
@@ -564,13 +573,13 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
       else:
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-    tf.logging.info("**** Trainable Variables ****")
-    for var in tvars:
-      init_string = ""
-      if var.name in initialized_variable_names:
-        init_string = ", *INIT_FROM_CKPT*"
-      tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                      init_string)
+    # tf.logging.info("**** Trainable Variables ****")
+    # for var in tvars:
+    #   init_string = ""
+    #   if var.name in initialized_variable_names:
+    #     init_string = ", *INIT_FROM_CKPT*"
+    #   tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+    #                   init_string)
 
     
     output_spec = None
@@ -587,13 +596,19 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     elif mode == tf.estimator.ModeKeys.EVAL:
 
       def metric_fn(per_example_loss, label_ids, logits):
+      # def metric_fn(label_ids, logits, trans):
+      #   weight = tf.sequence_mask(FLAGS.max_seq_length)
+      #   precision = tf_metrics.precision(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
+      #   recall = tf_metrics.recall(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
+      #   f = tf_metrics.f1(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
+
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
-        mask = tf.greater(token_start_mask, 0)
+        # mask = tf.greater(token_start_mask, 0)
 
-        label_ids = tf.boolean_mask(label_ids, mask)
-        predictions = tf.boolean_mask(predictions, mask)
-        accuracy = tf.metrics.accuracy(label_ids, predictions)
+        # label_ids = tf.boolean_mask(label_ids, mask)
+        # predictions = tf.boolean_mask(predictions, mask)
+        accuracy = tf.metrics.accuracy(label_ids, predictions, weights=token_start_mask)
         loss = tf.metrics.mean(per_example_loss)
         return {
             "eval_accuracy": accuracy,
