@@ -288,7 +288,7 @@ class CCGProcessor(DataProcessor):
     labels = sorted(counts, key=counts.get, reverse=True)
     freq_cutoff = 1
 
-    if self.rank_cutoff != None
+    if self.rank_cutoff != None:
       freq_cutoff = max(counts[labels[self.rank_cutoff]], freq_cutoff)
       tf.logging.info("Rank cutoff corresponds to at least {} counts.".format(str(freq_cutoff)))
 
