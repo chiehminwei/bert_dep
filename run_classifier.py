@@ -171,6 +171,10 @@ class DataProcessor(object):
     """Gets a collection of `InputExample`s for the dev set."""
     raise NotImplementedError()
 
+  def get_test_examples(self, data_dir):
+    """Gets a collection of `InputExample`s for the dev set."""
+    raise NotImplementedError()
+
   def get_labels(self):
     """Gets the list of labels for this data set."""
     raise NotImplementedError()
@@ -227,6 +231,29 @@ class CCGProcessor(DataProcessor):
         labels.append(label)
 
       guid = "dev-%d" % (i)
+      text_a = tokenization.convert_to_unicode(' '.join(words))
+      label = tokenization.convert_to_unicode(' '.join(labels))
+      true_labels.append(labels)
+      examples.append(
+          InputExample(guid=guid, text_a=text_a, label=label))
+    return examples, true_labels
+
+  def get_test_examples(self, data_dir):
+    """See base class."""
+    lines = self._read_tsv(os.path.join(data_dir, "test.tsv"))
+    true_labels = []
+    examples = []
+    for (i, line) in enumerate(lines):
+      words = []
+      labels = []
+      for unit in line:
+        split = unit.split('|')
+        word = split[0]
+        label = split[-1].strip()
+        words.append(word)
+        labels.append(label)
+
+      guid = "test-%d" % (i)
       text_a = tokenization.convert_to_unicode(' '.join(words))
       label = tokenization.convert_to_unicode(' '.join(labels))
       true_labels.append(labels)
