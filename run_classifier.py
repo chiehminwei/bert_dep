@@ -31,6 +31,7 @@ import numpy as np
 from lstm_crf_layer import BLSTM_CRF
 from tensorflow.contrib.layers.python.layers import initializers
 import tf_metrics
+from collections import defaultdict
 # from sklearn.metrics import classification_report
 
 flags = tf.flags
@@ -77,6 +78,8 @@ flags.DEFINE_integer(
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
+
+flags.DEFINE_bool("do_predict", True, "Whether to run the model in inference mode on the test set.")
 
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
 
@@ -192,8 +195,13 @@ class DataProcessor(object):
 class CCGProcessor(DataProcessor):
   """Processor for the CNCCG data set."""
 
-  def __init__(self):
+  def __init__(self, freq_cutoff=None, rank_cutoff=None):
+    # freq_cutoff: only include labels that occurs at least this many times in combined dataset
+    # rank_cutoff: only include the top N frequent labels in this dataset
+    # Will choose the more limiting of the two criteria to return
     self.language = "zh"
+    self.freq_cutoff = freq_cutoff
+    self.rank_cutoff = rank_cutoff
 
   def get_train_examples(self, data_dir):
     lines = self._read_tsv(os.path.join(data_dir,'train.tsv'))
@@ -263,18 +271,59 @@ class CCGProcessor(DataProcessor):
 
   def get_labels(self, data_dir):
     """See base class."""
-    lines = self._read_tsv(os.path.join(data_dir, "supertags.tsv"))
-    labels = []
+    train_lines = self._read_tsv(os.path.join(data_dir, "train.tsv"))
+    dev_lines = self._read_tsv(os.path.join(data_dir, "dev.tsv"))
+    test_lines = self._read_tsv(os.path.join(data_dir, "test.tsv"))
+    lines = train_lines + dev_lines + test_lines
+    counts = defaultdict(int)
     for line in lines:
-      labels.append(tokenization.convert_to_unicode(line[0]))
+      for unit in line:
+        label = tokenization.convert_to_unicode(unit.split('|')[-1])
+        counts[label] += 1
+
+    total_labels = len(counts)
+    tf.logging.info("There are {} unique labels in total.".format(total_labels))
+
+
+    labels = sorted(counts, key=counts.get, reverse=True)
+    freq_cutoff = 1
+
+    if self.rank_cutoff != None
+      freq_cutoff = max(counts[labels[self.rank_cutoff]], freq_cutoff)
+      tf.logging.info("Rank cutoff corresponds to at least {} counts.".format(str(freq_cutoff)))
+
+    if self.freq_cutoff != None:
+      freq_cutoff = max(self.freq_cutoff, freq_cutoff)
+      tf.logging.info("Frequency cutoff corresponds to at least {} counts.".format(str(self.freq_cutoff)))
+
+    
+    deleted_freq_count = 0
+    deleted_label_count = 0
+    for label, freq in counts.items():
+      if freq < freq_cutoff:
+        deleted_freq_count += freq
+        deleted_label_count += 1
+        del counts[label]
+
+    fraction = deleted_freq_count / np.sum(counts.values())
+    tf.logging.info("Ignoring {} of total data".format(str(fraction)))
+    tf.logging.info("Keeping {} out of {} unique labels".format(str(total_labels-deleted_label_count), str(total_labels)))
+    
+    labels = sorted(counts, key=counts.get, reverse=True)
     return labels
+
+    #lines = self._read_tsv(os.path.join(data_dir, "supertags.tsv"))
+    #labels = []
+    #for line in lines:
+    #  labels.append(tokenization.convert_to_unicode(line[0]))
+    #return labels
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
                            tokenizer):
   """Converts a single `InputExample` into a single `InputFeatures`."""
-  label_map = {}
+  label_map = defaultdict(int)
   for (i, label) in enumerate(label_list):
-    label_map[label] = i
+    label_map[label] = i + 1
 
   tokens_a = tokenizer.tokenize(example.text_a)
   tokens_b = None
@@ -344,7 +393,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   for orig_token, label in zip(orig_tokens, labels):
     sub_tokens = tokenizer.tokenize(orig_token)
     label_ids.extend([label_map[label]] * len(sub_tokens))
-    token_start_idxs.append(len(bert_tokens))
+    if label_map[label] != 0:
+      token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
 
   if len(label_ids) > max_seq_length - 1:
