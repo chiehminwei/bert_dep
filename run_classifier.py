@@ -710,7 +710,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     else:
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
-         predictions=pred_ids,
+         predictions={"predictions": pred_ids, "logits": logits},
          scaffold_fn=scaffold_fn)
     return output_spec
 
@@ -902,7 +902,7 @@ def main(_):
     estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
   if FLAGS.do_eval:
-    eval_examples,real_labels = processor.get_dev_examples(FLAGS.data_dir)
+    eval_examples, real_labels = processor.get_dev_examples(FLAGS.data_dir)
     eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
     file_based_convert_examples_to_features(
         eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
@@ -928,7 +928,6 @@ def main(_):
         drop_remainder=eval_drop_remainder)
     
    # Eval code
-
     eval_result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
@@ -940,7 +939,58 @@ def main(_):
    # Metric code
    # pred_result = estimator.predict(input_fn=eval_input_fn)
    # get_eval(pred_result, real_labels, label_list, FLAGS.max_seq_length) 
-    
+   
+  if FLAGS.do_predict:
+    predict_examples, real_labels = processor.get_test_examples(FLAGS.data_dir)
+    test_file = os.path.join(FLAGS.output_dir, "test.tf_record")
+    file_based_convert_examples_to_features(
+        predict_examples, label_list, FLAGS.max_seq_length, tokenizer, test_file)
+
+
+    num_actual_predict_examples = len(predict_examples)
+    if FLAGS.use_tpu:
+      # TPU requires a fixed batch size for all batches, therefore the number
+      # of examples must be a multiple of the batch size, or else examples
+      # will get dropped. So we pad with fake examples which are ignored
+      # later on.
+      while len(predict_examples) % FLAGS.predict_batch_size != 0:
+        predict_examples.append(PaddingInputExample())
+
+    predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+    file_based_convert_examples_to_features(predict_examples, label_list,
+                                            FLAGS.max_seq_length, tokenizer,
+                                            predict_file)
+
+    tf.logging.info("***** Running prediction*****")
+    tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+                    len(predict_examples), num_actual_predict_examples,
+                    len(predict_examples) - num_actual_predict_examples)
+    tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+
+    predict_drop_remainder = True if FLAGS.use_tpu else False
+
+    predict_input_fn = file_based_input_fn_builder(
+        input_file=predict_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=False,
+        drop_remainder=predict_drop_remainder)
+
+    result = estimator.predict(input_fn=predict_input_fn)
+
+    output_predict_file = os.path.join(FLAGS.output_dir, "test_results.txt")
+    with tf.gfile.GFile(output_predict_file, "w") as writer:
+      num_written_lines = 0
+      tf.logging.info("***** Predict results *****")
+      for (i, prediction) in enumerate(result):
+        probabilities = prediction["probabilities"]
+        if i >= num_actual_predict_examples:
+          break
+        output_line = "\t".join(
+            str(class_probability)
+            for class_probability in probabilities) + "\n"
+        writer.write(output_line)
+        num_written_lines += 1
+    assert num_written_lines == num_actual_predict_examples
 
 
 if __name__ == "__main__":
