@@ -56,10 +56,10 @@ class BLSTM_CRF(object):
             #project
             logits = self.project_bilstm_layer(lstm_output)
         #crf
-        loss, trans = self.crf_layer(logits)
+        loss, trans, log_likelihood = self.crf_layer(logits)
         # CRF decode, pred_ids 是一条最大概率的标注路径
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
-        return ((loss, logits, trans, pred_ids))
+        return ((loss, logits, trans, pred_ids, log_likelihood))
 
     def _which_cell(self):
         """
@@ -163,4 +163,4 @@ class BLSTM_CRF(object):
                 tag_indices=self.labels,
                 transition_params=trans,
                 sequence_lengths=self.lengths)
-            return tf.reduce_mean(-log_likelihood), trans
+            return tf.reduce_mean(-log_likelihood), trans, log_likelihood

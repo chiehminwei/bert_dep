@@ -633,7 +633,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
     #     num_labels, use_one_hot_embeddings, token_start_mask)
 
-    (total_loss, logits, trans, pred_ids) = create_model(
+    (total_loss, logits, trans, pred_ids, log_likelihood) = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
         num_labels, use_one_hot_embeddings, token_start_mask,
         lstm_size, cell_type, num_layers, dropout_rate)
@@ -710,7 +710,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     else:
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
-         predictions={"predictions": pred_ids, "logits": logits, "input_ids": input_ids, "label_ids": label_ids, "token_start_mask": token_start_mask, "input_mask": input_mask},
+         predictions={"predictions": pred_ids, "logits": log_likelihood, "input_ids": input_ids, "label_ids": label_ids, "token_start_mask": token_start_mask, "input_mask": input_mask},
          scaffold_fn=scaffold_fn)
     return output_spec
 
