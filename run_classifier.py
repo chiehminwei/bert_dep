@@ -28,7 +28,7 @@ import tokenization
 import tensorflow as tf
 import numpy as np
 
-from lstm_crf_layer import BLSTM_CRF
+from lstm_crf_layer import MLP_and_softmax
 from tensorflow.contrib.layers.python.layers import initializers
 import tf_metrics
 from collections import defaultdict
@@ -557,7 +557,7 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  labels, num_labels, use_one_hot_embeddings, token_start_mask,
-                 lstm_size, cell_type, num_layers, dropout_rate):
+                 hidden_size, cell_type, num_layers, hidden_dropout_prob):
   """Creates a classification model."""
   model = modeling.BertModel(
       config=bert_config,
@@ -569,10 +569,15 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   embedding = model.get_sequence_output()
   batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
   lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
-  blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=lstm_size, cell_type=cell_type, num_layers=num_layers,
-                          dropout_rate=dropout_rate, initializers=initializers, num_labels=num_labels,
-                          seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
-  rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
+  
+  mlp = MLP_and_softmax(embedded_chars=embedding, hidden_size=hidden_size, num_layers=num_layers,
+                          hidden_dropout_prob=hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
+                          seq_length=max_seq_length, labels=labels, length_mask=input_mask, is_training=is_training)
+  rst = mlp.compute()
+  # blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=lstm_size, cell_type=cell_type, num_layers=num_layers,
+  #                         dropout_rate=dropout_rate, initializers=initializers, num_labels=num_labels,
+  #                         seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
+  # rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
   return rst
 
   # final_hidden = model.get_sequence_output()
@@ -633,7 +638,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
     #     num_labels, use_one_hot_embeddings, token_start_mask)
 
-    (total_loss, logits, trans, pred_ids, log_likelihood) = create_model(
+    (total_loss, logits, pred_ids) = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
         num_labels, use_one_hot_embeddings, token_start_mask,
         lstm_size, cell_type, num_layers, dropout_rate)
@@ -677,7 +682,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     elif mode == tf.estimator.ModeKeys.EVAL:
 
       # def metric_fn(per_example_loss, label_ids, logits):
-      def metric_fn(label_ids, logits, trans, weight):
+      def metric_fn(label_ids, logits, weight):
         #precision = tf_metrics.precision(label_ids, pred_ids, num_labels, weight)
         #recall = tf_metrics.recall(label_ids, pred_ids, num_labels, weight)
         #f = tf_metrics.f1(label_ids, pred_ids, num_labels, weight)
@@ -700,7 +705,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         }
 
       weight = tf.to_float(token_start_mask)
-      eval_metrics = (metric_fn, [label_ids, logits, trans, weight])
+      eval_metrics = (metric_fn, [label_ids, logits, weight])
       # eval_metrics = (metric_fn, [per_example_loss, label_ids, logits])
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode,
@@ -710,7 +715,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     else:
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
-         predictions={"predictions": pred_ids, "logits": log_likelihood, "input_ids": input_ids, "label_ids": label_ids, "token_start_mask": token_start_mask, "input_mask": input_mask},
+         predictions={"predictions": pred_ids, "input_ids": input_ids, "label_ids": label_ids, "token_start_mask": token_start_mask, "input_mask": input_mask},
          scaffold_fn=scaffold_fn)
     return output_spec
 

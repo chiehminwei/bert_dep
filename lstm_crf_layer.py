@@ -164,3 +164,73 @@ class BLSTM_CRF(object):
                 transition_params=trans,
                 sequence_lengths=self.lengths)
             return tf.reduce_mean(-log_likelihood), trans, log_likelihood
+
+class MLP_and_softmax(object):
+    def __init__(self, embedded_chars, hidden_size, num_layers, hidden_dropout_prob,
+                 initializers, num_labels, seq_length, labels, length_mask, is_training):
+        """
+        :param embedded_chars: Fine-tuning embedding input
+        :param hidden_unit: MLP的隐含单元个数
+        :param num_layers: MLP的层数
+        :param droupout_rate: droupout rate
+        :param initializers: variable init class
+        :param num_labels: 标签数量
+        :param seq_length: 序列最大长度
+        :param labels: 真实标签
+        :param lengths: [batch_size] 每个batch下序列的真实长度
+        :param is_training: 是否是训练过程
+        """
+        self.hidden_size = hidden_size
+        self.dropout_rate = dropout_rate
+        self.num_layers = num_layers
+        self.embedded_chars = embedded_chars
+        self.initializers = initializers
+        self.seq_length = seq_length
+        self.num_labels = num_labels
+        self.labels = labels
+        self.length_mask = length_mask
+        self.embedding_dims = embedded_chars.shape[-1].value
+        self.is_training = is_training
+        if not is_training:
+            self.hidden_dropout_prob = 0.0
+
+    def compute(self):
+        prev_output = self.embedded_chars
+        with tf.variable_scope('MLP_and_softmax'):          
+          for layer_idx in range(num_hidden_layers):
+            with tf.variable_scope("MLP_layer_%d" % layer_idx):
+                layer_input = prev_output
+                layer_output =  tf.layers.dense(
+                  layer_input,
+                  self.hidden_size,
+                  tf.nn.relu,
+                  kernel_initializer=self.initializers.xavier_initializer())
+                layer_output = dropout(layer_output, self.hidden_dropout_prob)
+                prev_output = layer_output
+
+          logits = tf.layers.dense(prev_output, num_labels, kernel_initializer=self.initializers.xavier_initializer())
+          loss = tf.nn.seq2seq.sequence_loss(logits,
+                                             self.labels,
+                                             self.length_mask,
+                                             average_across_timesteps=False, average_across_batch=False)
+          pred_ids = tf.math.argmax(logits, -1)
+        return loss, logits, pred_ids       
+
+
+
+def dropout(input_tensor, dropout_prob):
+  """Perform dropout.
+
+  Args:
+    input_tensor: float Tensor.
+    dropout_prob: Python float. The probability of dropping out a value (NOT of
+      *keeping* a dimension as in `tf.nn.dropout`).
+
+  Returns:
+    A version of `input_tensor` with dropout applied.
+  """
+  if dropout_prob is None or dropout_prob == 0.0:
+    return input_tensor
+
+  output = tf.nn.dropout(input_tensor, 1.0 - dropout_prob)
+  return output
