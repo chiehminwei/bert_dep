@@ -197,7 +197,7 @@ class MLP_and_softmax(object):
     def compute(self):
         prev_output = self.embedded_chars
         with tf.variable_scope('MLP_and_softmax'):          
-          for layer_idx in range(num_hidden_layers):
+          for layer_idx in range(self.num_hidden_layers):
             with tf.variable_scope("MLP_layer_%d" % layer_idx):
                 layer_input = prev_output
                 layer_output =  tf.layers.dense(
