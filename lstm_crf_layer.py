@@ -209,7 +209,7 @@ class MLP_and_softmax(object):
                 prev_output = layer_output
 
           logits = tf.layers.dense(prev_output, self.num_labels, kernel_initializer=self.initializers.xavier_initializer())
-          loss = tf.nn.seq2seq.sequence_loss(logits,
+          loss = tf.contrib.seq2seq.sequence_loss(logits,
                                              self.labels,
                                              self.length_mask,
                                              average_across_timesteps=False, average_across_batch=False)
