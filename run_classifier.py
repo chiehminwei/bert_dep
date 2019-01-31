@@ -577,7 +577,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # rst = mlp.compute()
   blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=hidden_size, cell_type='lstm', num_layers=num_layers,
                           dropout_rate=1.0-hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
-                          seq_length=max_seq_length, labels=labels, lengths=mask, is_training=is_training)
+                          seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
   rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
   return rst
 
