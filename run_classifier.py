@@ -557,7 +557,7 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  labels, num_labels, use_one_hot_embeddings, token_start_mask,
-                 hidden_size, cell_type, num_layers, hidden_dropout_prob):
+                 hidden_size, num_layers, hidden_dropout_prob):
   """Creates a classification model."""
   model = modeling.BertModel(
       config=bert_config,
@@ -617,7 +617,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
-                     use_one_hot_embeddings, lstm_size, cell_type, num_layers, dropout_rate):
+                     use_one_hot_embeddings, hidden_size, num_layers, hidden_dropout_prob):
   """Returns `model_fn` closure for TPUEstimator."""
 
   def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -641,7 +641,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     (total_loss, logits, pred_ids) = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
         num_labels, use_one_hot_embeddings, token_start_mask,
-        lstm_size, cell_type, num_layers, dropout_rate)
+        hidden_size, num_layers, hidden_dropout_prob)
 
     tvars = tf.trainable_variables()
     initialized_variable_names = {}
