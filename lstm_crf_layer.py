@@ -39,7 +39,7 @@ class BLSTM_CRF(object):
         self.embedding_dims = embedded_chars.shape[-1].value
         self.is_training = is_training
 
-    def add_blstm_crf_layer_deprecated(self, crf_only):
+    def add_blstm_crf_layer(self, crf_only):
         """
         blstm-crf网络
         :return: 
@@ -56,12 +56,13 @@ class BLSTM_CRF(object):
             #project
             logits = self.project_bilstm_layer(lstm_output)
         #crf
-        loss, trans, log_likelihood = self.crf_layer(logits)
+        loss, trans = self.crf_layer(logits)
+        log_probability = tf.softmax(logits)
         # CRF decode, pred_ids 是一条最大概率的标注路径
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
-        return ((loss, logits, trans, pred_ids, log_likelihood))
+        return ((loss, log_probability, pred_ids))
 
-    def add_blstm_crf_layer(self, crf_only):
+    def add_blstm_crf_layer_not_really_working(self, crf_only):
         if self.is_training:
             # lstm input dropout rate i set 0.9 will get best score
             self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.dropout_rate)
@@ -177,7 +178,7 @@ class BLSTM_CRF(object):
                 tag_indices=self.labels,
                 transition_params=trans,
                 sequence_lengths=self.lengths)
-            return tf.reduce_mean(-log_likelihood), trans, log_likelihood
+            return tf.reduce_mean(-log_likelihood), trans
 
 class MLP_and_softmax(object):
     def __init__(self, embedded_chars, hidden_size, num_layers, hidden_dropout_prob,

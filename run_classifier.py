@@ -569,7 +569,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   embedding = model.get_sequence_output()
   batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
   lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
-  mask = tf.to_float(input_mask)
+  mask = tf.to_float(token_start_mask)
   
   # mlp = MLP_and_softmax(embedded_chars=embedding, hidden_size=hidden_size, num_layers=num_layers,
   #                         hidden_dropout_prob=hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
@@ -638,10 +638,11 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     # (total_loss, per_example_loss, logits) = create_model(
     #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
     #     num_labels, use_one_hot_embeddings, token_start_mask)
-    labels_one_hot = tf.one_hot(label_ids, num_labels)
+    
+    # labels_one_hot = tf.one_hot(label_ids, num_labels)
 
     (total_loss, logits, pred_ids) = create_model(
-        bert_config, is_training, input_ids, input_mask, segment_ids, labels_one_hot,
+        bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
         num_labels, use_one_hot_embeddings, token_start_mask,
         hidden_size, num_layers, hidden_dropout_prob)
 
