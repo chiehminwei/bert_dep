@@ -181,7 +181,7 @@ class MLP_and_softmax(object):
         :param is_training: 是否是训练过程
         """
         self.hidden_size = hidden_size
-        self.dropout_rate = dropout_rate
+        self.hidden_dropout_prob = hidden_dropout_prob
         self.num_layers = num_layers
         self.embedded_chars = embedded_chars
         self.initializers = initializers
