@@ -28,7 +28,7 @@ import tokenization
 import tensorflow as tf
 import numpy as np
 
-from lstm_crf_layer import MLP_and_softmax
+from lstm_crf_layer import MLP_and_softmax, BLSTM_CRF
 from tensorflow.contrib.layers.python.layers import initializers
 import tf_metrics
 from collections import defaultdict
@@ -570,14 +570,15 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
   lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
   mask = tf.to_float(input_mask)
-  mlp = MLP_and_softmax(embedded_chars=embedding, hidden_size=hidden_size, num_layers=num_layers,
-                          hidden_dropout_prob=hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
-                          seq_length=max_seq_length, labels=labels, length_mask=mask, is_training=is_training)
-  rst = mlp.compute()
-  # blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=lstm_size, cell_type=cell_type, num_layers=num_layers,
-  #                         dropout_rate=dropout_rate, initializers=initializers, num_labels=num_labels,
-  #                         seq_length=max_seq_length, labels=labels, lengths=lengths, is_training=is_training)
-  # rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
+  
+  # mlp = MLP_and_softmax(embedded_chars=embedding, hidden_size=hidden_size, num_layers=num_layers,
+  #                         hidden_dropout_prob=hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
+  #                         seq_length=max_seq_length, labels=labels, length_mask=mask, is_training=is_training)
+  # rst = mlp.compute()
+  blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=hidden_size, cell_type='lstm', num_layers=num_layers,
+                          dropout_rate=1.0-hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
+                          seq_length=max_seq_length, labels=labels, lengths=mask, is_training=is_training)
+  rst = blstm_crf.add_blstm_crf_layer(crf_only=False)
   return rst
 
   # final_hidden = model.get_sequence_output()
@@ -638,7 +639,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
     #     num_labels, use_one_hot_embeddings, token_start_mask)
     labels_one_hot = tf.one_hot(label_ids, num_labels)
-    
+
     (total_loss, logits, pred_ids) = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, labels_one_hot,
         num_labels, use_one_hot_embeddings, token_start_mask,

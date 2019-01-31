@@ -39,7 +39,7 @@ class BLSTM_CRF(object):
         self.embedding_dims = embedded_chars.shape[-1].value
         self.is_training = is_training
 
-    def add_blstm_crf_layer(self, crf_only):
+    def add_blstm_crf_layer_deprecated(self, crf_only):
         """
         blstm-crf网络
         :return: 
@@ -60,6 +60,20 @@ class BLSTM_CRF(object):
         # CRF decode, pred_ids 是一条最大概率的标注路径
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
         return ((loss, logits, trans, pred_ids, log_likelihood))
+
+    def add_blstm_crf_layer(self, crf_only):
+        if self.is_training:
+            # lstm input dropout rate i set 0.9 will get best score
+            self.embedded_chars = tf.nn.dropout(self.embedded_chars, self.dropout_rate)
+
+        #blstm
+        lstm_output = self.blstm_layer(self.embedded_chars)
+        #project
+        logits = self.project_bilstm_layer(lstm_output)
+        loss = tf.losses.softmax_cross_entropy(self.labels, logits, self.lengths, label_smoothing=0.9)
+        pred_ids = tf.math.argmax(logits, -1)
+
+        return ((loss, logits, pred_ids))
 
     def _which_cell(self):
         """
