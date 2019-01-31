@@ -716,9 +716,11 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
           eval_metrics=eval_metrics,
           scaffold_fn=scaffold_fn)
     else:
+      softmax = tf.nn.softmax(logits)
+      log_probs = tf.math.log(softmax)
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
-         predictions={"logits": logits, "predictions": pred_ids, "input_ids": input_ids, "label_ids": label_ids, "token_start_mask": token_start_mask, "input_mask": input_mask},
+         predictions={"log_probs": log_probs, "predictions": pred_ids, "input_ids": input_ids, "label_ids": label_ids, "token_start_mask": token_start_mask, "input_mask": input_mask},
          scaffold_fn=scaffold_fn)
     return output_spec
 

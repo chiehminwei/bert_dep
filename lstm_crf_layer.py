@@ -57,10 +57,9 @@ class BLSTM_CRF(object):
             logits = self.project_bilstm_layer(lstm_output)
         #crf
         loss, trans = self.crf_layer(logits)
-        log_probability = tf.nn.softmax(logits)
         # CRF decode, pred_ids 是一条最大概率的标注路径
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=self.lengths)
-        return ((loss, log_probability, pred_ids))
+        return ((loss, logits, pred_ids))
 
     def add_blstm_crf_layer_not_really_working(self, crf_only):
         if self.is_training:
