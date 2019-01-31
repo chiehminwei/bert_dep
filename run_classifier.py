@@ -569,10 +569,10 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   embedding = model.get_sequence_output()
   batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
   lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
-  
+  mask = tf.to_float(input_mask)
   mlp = MLP_and_softmax(embedded_chars=embedding, hidden_size=hidden_size, num_layers=num_layers,
                           hidden_dropout_prob=hidden_dropout_prob, initializers=initializers, num_labels=num_labels,
-                          seq_length=max_seq_length, labels=labels, length_mask=input_mask, is_training=is_training)
+                          seq_length=max_seq_length, labels=labels, length_mask=mask, is_training=is_training)
   rst = mlp.compute()
   # blstm_crf = BLSTM_CRF(embedded_chars=embedding, hidden_unit=lstm_size, cell_type=cell_type, num_layers=num_layers,
   #                         dropout_rate=dropout_rate, initializers=initializers, num_labels=num_labels,
