@@ -209,10 +209,15 @@ class MLP_and_softmax(object):
                 prev_output = layer_output
 
           logits = tf.layers.dense(prev_output, self.num_labels, kernel_initializer=self.initializers.xavier_initializer())
-          loss = tf.contrib.seq2seq.sequence_loss(logits,
-                                             self.labels,
-                                             self.length_mask,
-                                             average_across_timesteps=False, average_across_batch=False)
+          #logits_after_mask = logits * self.input_mask
+          loss = tf.losses.softmax_cross_entropy(self.labels, logits, self.length_mask, label_smoothing=0.9)
+
+          #cross_entropy = self.labels * 
+
+          #loss = tf.contrib.seq2seq.sequence_loss(logits,
+          #                                   self.labels,
+          #                                   self.length_mask,
+          #                                   average_across_timesteps=False, average_across_batch=False)
           pred_ids = tf.math.argmax(logits, -1)
         return loss, logits, pred_ids       
 
