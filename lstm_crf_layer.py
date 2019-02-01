@@ -82,7 +82,8 @@ class BLSTM_CRF(object):
         """
         cell_tmp = None
         if self.cell_type == 'lstm':
-            cell_tmp = rnn.BasicLSTMCell(self.hidden_unit)
+            cell_tmp = rnn.LayerNormBasicLSTMCell(self.hidden_unit, dropout_keep_prob=self.dropout_rate)
+            #cell_tmp = rnn.BasicLSTMCell(self.hidden_unit)
         elif self.cell_type == 'gru':
             cell_tmp = rnn.GRUCell(self.hidden_unit)
         # 是否需要进行dropout
