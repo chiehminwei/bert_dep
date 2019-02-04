@@ -393,8 +393,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   for orig_token, label in zip(orig_tokens, labels):
     sub_tokens = tokenizer.tokenize(orig_token)
     label_ids.extend([label_map[label]] * len(sub_tokens))
-    if label_map[label] != 0:
-      token_start_idxs.append(len(bert_tokens))
+    # if label_map[label] != 0:
+    token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
 
   if len(label_ids) > max_seq_length - 1:
