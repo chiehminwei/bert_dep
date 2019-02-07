@@ -639,10 +639,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     #     bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
     #     num_labels, use_one_hot_embeddings, token_start_mask)
     
-    # labels_one_hot = tf.one_hot(label_ids, num_labels)
+    labels_one_hot = tf.one_hot(label_ids, num_labels)
 
     (total_loss, logits, pred_ids) = create_model(
-        bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
+        bert_config, is_training, input_ids, input_mask, segment_ids, labels_one_hot,
         num_labels, use_one_hot_embeddings, token_start_mask,
         hidden_size, num_layers, hidden_dropout_prob)
 
