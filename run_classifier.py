@@ -145,9 +145,9 @@ class CoNLLProcessor(DataProcessor):
 
   def get_labels(self, data_dir):
     """See base class."""
-    train_lines = self._read_tsv(os.path.join(data_dir, "train.conllu"))
-    dev_lines = self._read_tsv(os.path.join(data_dir, "dev.conllu"))
-    test_lines = self._read_tsv(os.path.join(data_dir, "test.conllu"))
+    train_lines = self._read_tsv(os.path.join(data_dir, "en_ewt-ud-train.conllu"))
+    dev_lines = self._read_tsv(os.path.join(data_dir, "en_ewt-ud-dev.conllu"))
+    test_lines = self._read_tsv(os.path.join(data_dir, "en_ewt-ud-test.conllu"))
     lines = train_lines + dev_lines + test_lines
     head_counts = defaultdict(int)
     rel_counts = defaultdict(int)
