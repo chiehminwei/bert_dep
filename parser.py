@@ -1,4 +1,5 @@
 from modelling import gelu
+import numpy as np
 
 class Parser(object):
 
@@ -11,7 +12,7 @@ class Parser(object):
 		self.label_mlp_size = label_mlp_size
 
 
-	def compute(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_rel_labels, token_start_mask):
+	def compute(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, token_start_mask):
 		
 		with tf.variable_scope('MLP'):
 			dep_mlp, head_mlp = self.MLP(inputs, self.arc_mlp_size, self.label_mlp_size)
@@ -19,6 +20,7 @@ class Parser(object):
 			head_arc_mlp, head_rel_mlp = head_mlp[:,:,:self.arc_mlp_size], head_mlp[:,:,self.arc_mlp_size:]
 		
 		with tf.variable_scope('Arcs',):
+			# token_start_mask = (batch_size, bucket_size, bucket_size)
 			arc_logits = self.bilinear_classifier(dep_arc_mlp, head_arc_mlp)
 			arc_output = self.output(arc_logits, head_labels_one_hot, token_start_mask)
 			if self.is_training:
@@ -121,9 +123,20 @@ class Parser(object):
 	    return tf.reshape(probabilities2D, original_shape)
 
 	def output(self, logits, targets, token_start_mask):
-    
-    	probabilities = tf.nn.softmax(logits)
-    	predictions = tf.math.argmax(logits, -1)
+    	# logits = (batch_size, bucket_size, bucket_size)
+    	# token_start_mask = (batch_size, bucket_size, bucket_size)
+    	filtered_logits = logits * token_start_mask
+    	
+    	# probabilities = (batch_size, bucket_size, bucket_size)
+    	# This is technically "incorrect" b/c it doesn't mask out non-starting tokens
+    	# For correct implementation https://github.com/tensorflow/tensorflow/issues/11756
+    	# But it doesn't seem worth the effort for now. Will come back later if we need probabilities for parsing or sth
+    	probabilities = tf.nn.softmax(token_start_mask) 
+
+    	# predictions = (batch_size, bucket_size) 
+    	# Also predicts heads for non-starting tokens, but doesn't make non-starting tokens heads
+    	masked_logits = tf.minimum(logits, (2 * token_start_mask - 1) * np.inf)
+    	predictions = tf.math.argmax(masked_logits, -1)
 		loss = tf.losses.softmax_cross_entropy(targets, logits, token_start_mask, label_smoothing=0.9)
 		accuracy = tf.metrics.accuracy(targets, predictions, weights=token_start_mask)
 

@@ -233,7 +233,6 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
     tf.logging.info("guid: %s" % (example.guid))
     tf.logging.info("tokens: %s" % " ".join(
         [tokenization.printable_text(x) for x in tokens]))
-    tf.logging.info("token_start_mask: %s" % " ".join([str(x) for x in token_start_mask]))
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
@@ -379,7 +378,8 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-                 head_labels_one_hot, rel_labels_one_hot, num_rel_labels, use_one_hot_embeddings, token_start_mask):
+                 head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, 
+                 use_one_hot_embeddings, token_start_mask):
   """Creates a classification model."""
   model = modeling.BertModel(
       config=bert_config,
@@ -394,7 +394,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   mask = tf.to_float(token_start_mask)
   
   parser = Parser(initializers, mlp_droupout_rate, arc_mlp_size, label_mlp_size)
-  output = parser.compute(embedding, head_labels_one_hot, rel_labels_one_hot, num_rel_labels, mask)
+  output = parser.compute(embedding, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, mask)
   return output
 
 
@@ -418,12 +418,13 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
     
-    head_labels_one_hot = tf.one_hot(head_label_ids, max_seq_length)
+    num_head_labels = max_seq_length
+    head_labels_one_hot = tf.one_hot(head_label_ids, num_head_labels)
     rel_labels_one_hot = tf.one_hot(label_ids, num_rel_labels)
 
     output = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, head_labels_one_hot,
-        rel_labels_one_hot, num_rel_labels, use_one_hot_embeddings, token_start_mask)
+        rel_labels_one_hot, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask)
 
     total_loss = output['loss']
 
