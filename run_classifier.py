@@ -114,6 +114,7 @@ class CoNLLProcessor(DataProcessor):
         rels.append(rel)
 
       else:
+        print(line)
         if line[0].startswith('#'):
           if words:
             guid = "%s-%d" % (mode, example_count)
