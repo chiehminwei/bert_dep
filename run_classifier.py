@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """BERT finetuning runner."""
-DATA_DIR = "/Users/Jimmy/research/Universal_Dependencies_2.3/ud-treebanks-v2.3/UD_English-EWT/en_ewt-ud-dev.conllu"
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -400,7 +398,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   return output
 
 
-def model_fn_builder(bert_config, num_head_labels, num_rel_labels, init_checkpoint, learning_rate,
+def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
                      use_one_hot_embeddings, max_seq_length):
   """Returns `model_fn` closure for TPUEstimator."""
