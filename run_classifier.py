@@ -88,7 +88,7 @@ class CoNLLProcessor(DataProcessor):
   def get_examples(self, mode, data_dir):
     """Gets a collection of `InputExample`s for the data set."""
     assert mode in ['train', 'dev', 'test'], "mode must be 'train', 'dev', or 'test'"
-    lines = self._read_tsv(os.path.join(data_dir, mode + '.conllu'))    
+    lines = self._read_tsv(os.path.join(data_dir, 'en_ewt-ud-' + mode + '.conllu'))    
     example_count = 0
     examples = []
     words = []
