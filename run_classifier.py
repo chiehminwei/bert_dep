@@ -157,7 +157,7 @@ class CoNLLProcessor(DataProcessor):
         rel_counts[rel] += 1
 
     total_head_labels = len(head_counts)
-    total_rel_labels = len(rel_labels)
+    total_rel_labels = len(rel_counts)
     tf.logging.info("There are {} rel labels and {} head labels in total.".format(total_rel_labels, total_head_labels))
     
     head_labels = sorted(head_counts, key=head_counts.get, reverse=True)
