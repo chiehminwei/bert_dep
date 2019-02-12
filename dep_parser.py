@@ -70,11 +70,13 @@ class Parser(object):
 		inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	    
 		inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	    
 		
+		# bilin = (batch_size, bucket_size, n_classes, bucket_size)
 		bilin = linalg.bilinear(inputs1, inputs2, 1,
 								add_bias1=add_bias1,
 								add_bias2=add_bias2,
 								initializer=tf.zeros_initializer,
 								moving_params=None)
+		# output = (batch_size, bucket_size, bucket_size)
 		output = tf.squeeze(bilin)
 		return output
 
@@ -125,15 +127,16 @@ class Parser(object):
 		return tf.reshape(probabilities2D, original_shape)
 
 	def output(self, logits, targets, token_start_mask):
-		filtered_logits = logits * token_start_mask
+		token_start_mask = tf.expand_dims(token_start_mask, axis=1)
+		# filtered_logits = logits * mask
 		# logits = (batch_size, bucket_size, bucket_size)
-		# token_start_mask = (batch_size, bucket_size, bucket_size)
+		# token_start_mask = (batch_size, bucket_size)
 		
 		# probabilities = (batch_size, bucket_size, bucket_size)
 		# This is technically "incorrect" b/c it doesn't mask out non-starting tokens
 		# For correct implementation https://github.com/tensorflow/tensorflow/issues/11756
 		# But it doesn't seem worth the effort for now. Will come back later if we need probabilities for parsing or sth
-		probabilities = tf.nn.softmax(token_start_mask) 
+		probabilities = tf.nn.softmax(logits) 
 
 		# predictions = (batch_size, bucket_size) 
 		# Also predicts heads for non-starting tokens, but doesn't make non-starting tokens heads
