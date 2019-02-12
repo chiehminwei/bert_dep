@@ -3,10 +3,10 @@ import numpy as np
 
 class Parser(object):
 
-	def __init__(self, initializers, mlp_droput_rate, arc_mlp_size=500, label_mlp_size=100):
+	def __init__(self, initializers, is_training, mlp_droput_rate, arc_mlp_size=500, label_mlp_size=100):
 		
-		self.is_training = is_training
 		self.initializers = initializers
+		self.is_training = is_training
 		self.mlp_droput_rate = mlp_droput_rate
 		self.arc_mlp_size = arc_mlp_size
 		self.label_mlp_size = label_mlp_size

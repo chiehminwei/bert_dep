@@ -393,7 +393,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
   mask = tf.to_float(token_start_mask)
   
-  parser = Parser(initializers, mlp_droupout_rate, arc_mlp_size, label_mlp_size)
+  parser = Parser(initializers, is_training, mlp_droupout_rate, arc_mlp_size, label_mlp_size)
   output = parser.compute(embedding, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, mask)
   return output
 
