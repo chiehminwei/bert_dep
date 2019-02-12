@@ -286,7 +286,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
     tf.logging.info("*** Example ***")
     tf.logging.info("guid: %s" % (example.guid))
     tf.logging.info("tokens: %s" % " ".join(
-        [tokenization.printable_text(x) for x in tokens]))
+        [tokenization.printable_text(x) for x in bert_tokens]))
     tf.logging.info("token_start_mask: %s" % " ".join([str(x) for x in token_start_mask]))
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
