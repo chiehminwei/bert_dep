@@ -64,79 +64,79 @@ class Parser(object):
 
 
 	def bilinear_classifier(self, inputs1, inputs2, add_bias1=True, add_bias2=False):
-	    
-	    inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	    
-	    inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	    
-	    
-	    bilin = linalg.bilinear(inputs1, inputs2, 1,
-	                            add_bias1=add_bias1,
-	                            add_bias2=add_bias2,
-	                            initializer=tf.zeros_initializer,
-	                            moving_params=None)
-	    output = tf.squeeze(bilin)
-	    return output
+		
+		inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	    
+		inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	    
+		
+		bilin = linalg.bilinear(inputs1, inputs2, 1,
+								add_bias1=add_bias1,
+								add_bias2=add_bias2,
+								initializer=tf.zeros_initializer,
+								moving_params=None)
+		output = tf.squeeze(bilin)
+		return output
 
 	def conditional_bilinear_classifier(self, inputs1, inputs2, n_classes, probs, add_bias1=True, add_bias2=True):
-    
-	    input_shape = tf.shape(inputs1)
-	    batch_size = input_shape[0]
-	    bucket_size = input_shape[1]
-	    input_size = inputs1.get_shape().as_list()[-1]
-	    input_shape_to_set = [tf.Dimension(None), tf.Dimension(None), input_size+1]
-	    output_shape = tf.stack([batch_size, bucket_size, n_classes, bucket_size])
-	    # probs = (batch_size, bucket_size, bucket_size)
-	    if self.is_training:
-	    	probs = tf.stop_gradient(probs)
-	    
-	    # inputs = (batch_size, bucket_size, arc_mlp_size/ label_mlp_size)
-	    inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	    
-	    inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	 
-	    
-	    inputs1 = tf.concat([inputs1, tf.ones(tf.stack([batch_size, bucket_size, 1]))], 2)
-	    inputs1.set_shape(input_shape_to_set)
-	    inputs2 = tf.concat([inputs2, tf.ones(tf.stack([batch_size, bucket_size, 1]))], 2)
-	    inputs2.set_shape(input_shape_to_set)
-	    
-	    # bilin = (batch_size, bucket_size, n_classes, bucket_size)
-	    bilin = linalg.bilinear(inputs1, inputs2,
-	                     n_classes,
-	                     add_bias1=add_bias1,
-	                     add_bias2=add_bias2,
-	                     initializer=tf.zeros_initializer,
-	                     moving_params=None)
-	    weighted_bilin = tf.linalg.matmul(bilin, tf.expand_dims(probs, 3))
-	    # expanded_probs = (batch_size, bucket_size, bucket_size, 1)
-	    # weighted_bilin = (batch_size, bucket_size, n_classes, 1) lmao idk
-	    
-	    return weighted_bilin, bilin
+	
+		input_shape = tf.shape(inputs1)
+		batch_size = input_shape[0]
+		bucket_size = input_shape[1]
+		input_size = inputs1.get_shape().as_list()[-1]
+		input_shape_to_set = [tf.Dimension(None), tf.Dimension(None), input_size+1]
+		output_shape = tf.stack([batch_size, bucket_size, n_classes, bucket_size])
+		# probs = (batch_size, bucket_size, bucket_size)
+		if self.is_training:
+			probs = tf.stop_gradient(probs)
+		
+		# inputs = (batch_size, bucket_size, arc_mlp_size/ label_mlp_size)
+		inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	    
+		inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	 
+		
+		inputs1 = tf.concat([inputs1, tf.ones(tf.stack([batch_size, bucket_size, 1]))], 2)
+		inputs1.set_shape(input_shape_to_set)
+		inputs2 = tf.concat([inputs2, tf.ones(tf.stack([batch_size, bucket_size, 1]))], 2)
+		inputs2.set_shape(input_shape_to_set)
+		
+		# bilin = (batch_size, bucket_size, n_classes, bucket_size)
+		bilin = linalg.bilinear(inputs1, inputs2,
+						 n_classes,
+						 add_bias1=add_bias1,
+						 add_bias2=add_bias2,
+						 initializer=tf.zeros_initializer,
+						 moving_params=None)
+		weighted_bilin = tf.linalg.matmul(bilin, tf.expand_dims(probs, 3))
+		# expanded_probs = (batch_size, bucket_size, bucket_size, 1)
+		# weighted_bilin = (batch_size, bucket_size, n_classes, 1) lmao idk
+		
+		return weighted_bilin, bilin
 
 	def conditional_probabilities(self, logits4D, transpose=True):
 		# logits4D = (batch_size, bucket_size, n_classes, bucket_size)
-	    if transpose:
-	      logits4D = tf.transpose(logits4D, [0,1,3,2])
-	    # logits4D = (batch_size, bucket_size, bucket_size, n_classes)
-	    original_shape = tf.shape(logits4D)
-	    n_classes = original_shape[3]
-	    
-	    logits2D = tf.reshape(logits4D, tf.stack([-1, n_classes]))
-	    probabilities2D = tf.nn.softmax(logits2D)
-	    return tf.reshape(probabilities2D, original_shape)
+		if transpose:
+		  logits4D = tf.transpose(logits4D, [0,1,3,2])
+		# logits4D = (batch_size, bucket_size, bucket_size, n_classes)
+		original_shape = tf.shape(logits4D)
+		n_classes = original_shape[3]
+		
+		logits2D = tf.reshape(logits4D, tf.stack([-1, n_classes]))
+		probabilities2D = tf.nn.softmax(logits2D)
+		return tf.reshape(probabilities2D, original_shape)
 
 	def output(self, logits, targets, token_start_mask):
-    	# logits = (batch_size, bucket_size, bucket_size)
-    	# token_start_mask = (batch_size, bucket_size, bucket_size)
-    	filtered_logits = logits * token_start_mask
-    	
-    	# probabilities = (batch_size, bucket_size, bucket_size)
-    	# This is technically "incorrect" b/c it doesn't mask out non-starting tokens
-    	# For correct implementation https://github.com/tensorflow/tensorflow/issues/11756
-    	# But it doesn't seem worth the effort for now. Will come back later if we need probabilities for parsing or sth
-    	probabilities = tf.nn.softmax(token_start_mask) 
+		filtered_logits = logits * token_start_mask
+		# logits = (batch_size, bucket_size, bucket_size)
+		# token_start_mask = (batch_size, bucket_size, bucket_size)
+		
+		# probabilities = (batch_size, bucket_size, bucket_size)
+		# This is technically "incorrect" b/c it doesn't mask out non-starting tokens
+		# For correct implementation https://github.com/tensorflow/tensorflow/issues/11756
+		# But it doesn't seem worth the effort for now. Will come back later if we need probabilities for parsing or sth
+		probabilities = tf.nn.softmax(token_start_mask) 
 
-    	# predictions = (batch_size, bucket_size) 
-    	# Also predicts heads for non-starting tokens, but doesn't make non-starting tokens heads
-    	masked_logits = tf.minimum(logits, (2 * token_start_mask - 1) * np.inf)
-    	predictions = tf.math.argmax(masked_logits, -1)
+		# predictions = (batch_size, bucket_size) 
+		# Also predicts heads for non-starting tokens, but doesn't make non-starting tokens heads
+		masked_logits = tf.minimum(logits, (2 * token_start_mask - 1) * np.inf)
+		predictions = tf.math.argmax(masked_logits, -1)
 		loss = tf.losses.softmax_cross_entropy(targets, logits, token_start_mask, label_smoothing=0.9)
 		accuracy = tf.metrics.accuracy(targets, predictions, weights=token_start_mask)
 
@@ -146,5 +146,5 @@ class Parser(object):
 			'accuracy': accuracy,
 			'loss': loss,
 		}
-	    
-	    return output
+		
+		return output
