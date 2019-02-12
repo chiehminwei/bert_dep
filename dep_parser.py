@@ -136,7 +136,8 @@ class Parser(object):
 		masked_logits = logits * mask
 		
 		# probabilities = (batch_size, bucket_size, bucket_size)
-		probabilities = tf.sparse.softmax(masked_logits) 
+		probabilities = maskedSoftmax(logits, mask)
+		# probabilities = tf.sparse.softmax(masked_logits) 
 
 		# predictions = (batch_size, bucket_size) 
 		predictions = tf.math.argmax(masked_logits, -1)
@@ -151,3 +152,19 @@ class Parser(object):
 		}
 		
 		return output
+
+
+def maskedSoftmax(logits, mask):
+    """
+    Masked softmax over dim 1
+    :param logits: (N, L)
+    :param mask: (N, L)
+    :return: probabilities (N, L)
+    """
+    indices = tf.where(mask)
+    values = tf.gather_nd(logits, indices)
+    denseShape = tf.cast(tf.shape(logits), tf.int64)
+    sparseResult = tf.sparse_softmax(tf.SparseTensor(indices, values, denseShape))
+    result = tf.scatter_nd(sparseResult.indices, sparseResult.values, sparseResult.dense_shape)
+    result.set_shape(logits.shape)
+    return result
