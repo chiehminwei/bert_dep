@@ -291,7 +291,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("rel_labels: %s (id = %s)" % (example.rel_labels, " ".join([str(x) for x in rel_label_ids])))
+    tf.logging.info("rel_labels: %s (id = %s)" % (example.rels, " ".join([str(x) for x in rel_label_ids])))
     tf.logging.info("head_labels: %s" % ( " ".join([str(x) for x in head_label_ids])))
 
   feature = InputFeatures(
