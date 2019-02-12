@@ -226,8 +226,8 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
     sub_tokens = tokenizer.tokenize(orig_token)
     head_label_ids.extend([head_label_map[head_label]] * len(sub_tokens))
-    rel_label_ids.extend([rel_label_map[label]] * len(sub_tokens))
-    # if label_map[label] != 0:
+    rel_label_ids.extend([rel_label_map[rel_label]] * len(sub_tokens))
+    # if label_map[rel_label] != 0:
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
 
