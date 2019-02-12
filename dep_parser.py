@@ -1,4 +1,4 @@
-from modelling import gelu
+from modeling import gelu
 import numpy as np
 
 class Parser(object):
