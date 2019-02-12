@@ -159,7 +159,7 @@ def bilinear(inputs1, inputs2, output_size, add_bias2=True, add_bias1=True, add_
                         tf.reshape(weights, [inputs1_size+add_bias1, -1]))
     # (b x nr x d) (b x n x d)T -> (b x nr x n)
     bilin = tf.linalg.matmul(tf.reshape(lin, tf.stack([batch_size, inputs1_bucket_size*output_size, inputs2_size+add_bias2])),
-                                   inputs2, adj_y=True)
+                                   inputs2, adjoint_b=True)
     # (bn x r x n)
     bilin = tf.reshape(bilin, tf.stack([-1, output_size, inputs2_bucket_size]))
     # (b x n x r x n)
