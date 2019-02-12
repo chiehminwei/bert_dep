@@ -142,9 +142,9 @@ class Parser(object):
 
 		output = {
 			'probabilities': probabilities,
-			'predictions':, predictions,
+			'predictions': predictions,
 			'accuracy': accuracy,
-			'loss': loss,
+			'loss': loss
 		}
 		
 		return output
