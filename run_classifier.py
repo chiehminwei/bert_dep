@@ -232,18 +232,12 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 
   # Account for [CLS] and [SEP]
   if len(bert_tokens) >= max_seq_length:
-    input_ids = tokenizer.convert_tokens_to_ids(bert_tokens)
     tf.logging.info("*** Truncating sentence ***")
     tf.logging.info("length of tokens: %d" % (len(bert_tokens)))
     tf.logging.info("guid: %s" % (example.guid))
     tf.logging.info("tokens: %s" % " ".join(
         [tokenization.printable_text(x) for x in bert_tokens]))
-    tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-    tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-    tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("rel_labels: %s (id = %s)" % (example.rels, " ".join([str(x) for x in rel_label_ids])))
-    tf.logging.info("head_labels: %s" % ( " ".join([str(x) for x in head_label_ids])))
-
+    
     bert_tokens = bert_tokens[:max_seq_length-1]
     head_label_ids = head_label_ids[:max_seq_length-1]
     rel_label_ids = rel_label_ids[:max_seq_length-1]
