@@ -151,6 +151,10 @@ class CoNLLProcessor(DataProcessor):
     rel_counts = defaultdict(int)
     for line in lines:
       if len(line) == 10:
+        try:
+          head = int(line[6])
+        except:
+          continue
         head = tokenization.convert_to_unicode(line[6])
         rel = tokenization.convert_to_unicode(line[7])
         head_counts[head] += 1
