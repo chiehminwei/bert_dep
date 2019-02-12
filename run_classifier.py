@@ -179,13 +179,13 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   for (i, label) in enumerate(rel_label_list):    
     rel_label_map[label] = i + 1
 
-  # -1 is for index longer than max_seq_length
+  # 0 is for index longer than max_seq_length
   head_label_map = defaultdict(int)
   for (i, label) in enumerate(head_label_list):
     real_label = int(label)
     head_label_map[label] = real_label
     if real_label >= max_seq_length-1:
-        head_label_map[label] = -1
+        head_label_map[label] = 0
     
   # The convention in BERT is:
   # (a) For sequence pairs:
@@ -379,7 +379,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, 
-                 use_one_hot_embeddings, token_start_mask):
+                 use_one_hot_embeddings, token_start_mask, mlp_droupout_rate, arc_mlp_size, label_mlp_size):
   """Creates a classification model."""
   model = modeling.BertModel(
       config=bert_config,
@@ -400,7 +400,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
 def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
-                     use_one_hot_embeddings, max_seq_length):
+                     use_one_hot_embeddings, max_seq_length, mlp_droupout_rate, arc_mlp_size, label_mlp_size):
   """Returns `model_fn` closure for TPUEstimator."""
 
   def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -424,7 +424,8 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 
     output = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, head_labels_one_hot,
-        rel_labels_one_hot, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask)
+        rel_labels_one_hot, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask,
+        mlp_droupout_rate, arc_mlp_size, label_mlp_size)
 
     total_loss = output['loss']
 
