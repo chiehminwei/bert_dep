@@ -128,6 +128,7 @@ class Parser(object):
 
 	def arc_output(self, logits, targets, token_start_mask):
 		logits_mask = tf.expand_dims(token_start_mask, axis=1)
+		token_start_mask = tf.expand_dims(token_start_mask, axis=-1)
 		# filtered_logits = logits * mask
 		# logits = (batch_size, bucket_size, bucket_size)
 		# token_start_mask = (batch_size, bucket_size)
