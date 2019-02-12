@@ -24,7 +24,7 @@ class Parser(object):
 		with tf.variable_scope('Arcs',):
 			# token_start_mask = (batch_size, bucket_size, bucket_size)
 			arc_logits = self.bilinear_classifier(dep_arc_mlp, head_arc_mlp)
-			arc_output = self.output(arc_logits, head_labels_one_hot, token_start_mask)
+			arc_output = self.arc_output(arc_logits, head_labels_one_hot, token_start_mask)
 			if self.is_training:
 				predictions = arc_output['predictions']
 			else:
@@ -126,8 +126,8 @@ class Parser(object):
 		probabilities2D = tf.nn.softmax(logits2D)
 		return tf.reshape(probabilities2D, original_shape)
 
-	def output(self, logits, targets, token_start_mask):
-		token_start_mask = tf.expand_dims(token_start_mask, axis=1)
+	def arc_output(self, logits, targets, token_start_mask):
+		logits_mask = tf.expand_dims(token_start_mask, axis=1)
 		# filtered_logits = logits * mask
 		# logits = (batch_size, bucket_size, bucket_size)
 		# token_start_mask = (batch_size, bucket_size)
@@ -140,7 +140,7 @@ class Parser(object):
 
 		# predictions = (batch_size, bucket_size) 
 		# Also predicts heads for non-starting tokens, but doesn't make non-starting tokens heads
-		masked_logits = tf.minimum(logits, (2 * token_start_mask - 1) * np.inf)
+		masked_logits = tf.minimum(logits, (2 * logits_mask - 1) * np.inf)
 		predictions = tf.math.argmax(masked_logits, -1)
 		loss = tf.losses.softmax_cross_entropy(targets, logits, token_start_mask, label_smoothing=0.9)
 		accuracy = tf.metrics.accuracy(targets, predictions, weights=token_start_mask)
