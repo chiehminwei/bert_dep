@@ -26,9 +26,9 @@ class Parser(object):
 			arc_logits = self.bilinear_classifier(dep_arc_mlp, head_arc_mlp)
 			arc_output = self.arc_output(arc_logits, head_labels_one_hot, token_start_mask)
 			if self.is_training:
-				predictions = arc_output['predictions']
-			else:
 				predictions = head_labels_one_hot
+			else:
+				predictions = arc_output['predictions']				
 
 		with tf.variable_scope('Rels'):
 			rel_logits, rel_logits_cond = self.conditional_bilinear_classifier(dep_rel_mlp, head_rel_mlp, num_rel_labels, predictions)
@@ -108,7 +108,7 @@ class Parser(object):
 						 add_bias2=add_bias2,
 						 initializer=tf.zeros_initializer,
 						 moving_params=None)
-		weighted_bilin = tf.linalg.matmul(bilin, tf.expand_dims(probs, 3))
+		weighted_bilin = tf.linalg.matmul(bilin, tf.expand_dims(probs, 3)) #IDK this line
 		# expanded_probs = (batch_size, bucket_size, bucket_size, 1)
 		# weighted_bilin = (batch_size, bucket_size, n_classes, 1) lmao idk
 		
@@ -127,24 +127,21 @@ class Parser(object):
 		return tf.reshape(probabilities2D, original_shape)
 
 	def arc_output(self, logits, targets, token_start_mask):
-		logits_mask = tf.expand_dims(token_start_mask, axis=1)
-		token_start_mask = tf.expand_dims(token_start_mask, axis=-1)
-		# filtered_logits = logits * mask
-		# logits = (batch_size, bucket_size, bucket_size)
-		# token_start_mask = (batch_size, bucket_size)
+		
+		mask = tf.ones_like(logits, dtype=tf.float32)
+		mask_horizontal = tf.expand_dims(token_start_mask, axis=-1)
+		mask_vertical = tf.expand_dims(token_start_mask, axis=1)
+		mask = mask * mask_horizontal * mask_vertical
+
+		masked_logits = logits * mask
 		
 		# probabilities = (batch_size, bucket_size, bucket_size)
-		# This is technically "incorrect" b/c it doesn't mask out non-starting tokens
-		# For correct implementation https://github.com/tensorflow/tensorflow/issues/11756
-		# But it doesn't seem worth the effort for now. Will come back later if we need probabilities for parsing or sth
-		probabilities = tf.nn.softmax(logits) 
+		probabilities = tf.sparse.softmax(masked_logits) 
 
 		# predictions = (batch_size, bucket_size) 
-		# Also predicts heads for non-starting tokens, but doesn't make non-starting tokens heads
-		masked_logits = tf.minimum(logits, (2 * logits_mask - 1) * np.inf)
 		predictions = tf.math.argmax(masked_logits, -1)
-		loss = tf.losses.softmax_cross_entropy(targets, logits, token_start_mask, label_smoothing=0.9)
-		accuracy = tf.metrics.accuracy(targets, predictions, weights=token_start_mask)
+		loss = tf.losses.sparse_softmax_cross_entropy(targets, masked_logits, mask_horizontal)
+		accuracy = tf.metrics.accuracy(targets, predictions, weights=mask_horizontal)
 
 		output = {
 			'probabilities': probabilities,
