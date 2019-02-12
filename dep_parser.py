@@ -32,7 +32,7 @@ class Parser(object):
 
 		with tf.variable_scope('Rels'):
 			rel_logits, rel_logits_cond = self.conditional_bilinear_classifier(dep_rel_mlp, head_rel_mlp, num_rel_labels, predictions)
-			rel_output = self.output(rel_logits, rel_labels_one_hot, token_start_mask)
+			rel_output = self.arc_output(rel_logits, rel_labels_one_hot, token_start_mask)
 			rel_output['probabilities'] = self.conditional_probabilities(rel_logits_cond)
 		
 		output = {}
