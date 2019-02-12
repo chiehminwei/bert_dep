@@ -29,6 +29,7 @@ import numpy as np
 
 from tensorflow.contrib.layers.python.layers import initializers
 from collections import defaultdict
+from parser import Parser
 
 
 class InputExample(object):
