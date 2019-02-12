@@ -1,5 +1,6 @@
 from modeling import gelu
 import numpy as np
+import tensorflow as tf
 
 class Parser(object):
 
