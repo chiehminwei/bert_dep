@@ -232,6 +232,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 
   # Account for [CLS] and [SEP]
   if len(bert_tokens) >= max_seq_length:
+    input_ids = tokenizer.convert_tokens_to_ids(bert_tokens)
     tf.logging.info("*** Truncating sentence ***")
     tf.logging.info("length of tokens: %d" % (len(bert_tokens)))
     tf.logging.info("guid: %s" % (example.guid))
