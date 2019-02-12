@@ -141,8 +141,8 @@ class Parser(object):
 
 		# predictions = (batch_size, bucket_size) 
 		predictions = tf.math.argmax(masked_logits, -1)
-		loss = tf.losses.sparse_softmax_cross_entropy(targets, masked_logits, mask_horizontal)
 		accuracy = tf.metrics.accuracy(targets, predictions, weights=mask_horizontal)
+		loss = tf.losses.sparse_softmax_cross_entropy(targets, masked_logits, mask_horizontal)
 
 		output = {
 			'probabilities': probabilities,
