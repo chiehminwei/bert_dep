@@ -207,7 +207,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   segment_ids = [0] * max_seq_length
   
   orig_tokens = example.words.split()
-  rel_labels = example.rel_labels.split()
+  rel_labels = example.rels.split()
   head_labels = example.heads.split()
   
   # Token map will be an int -> int mapping between the `orig_tokens` index and the `bert_tokens` index.
@@ -240,7 +240,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
     tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
     tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
-    tf.logging.info("rel_labels: %s (id = %s)" % (example.rel_labels, " ".join([str(x) for x in rel_label_ids])))
+    tf.logging.info("rel_labels: %s (id = %s)" % (example.rels, " ".join([str(x) for x in rel_label_ids])))
     tf.logging.info("head_labels: %s" % ( " ".join([str(x) for x in head_label_ids])))
 
     bert_tokens = bert_tokens[:max_seq_length-1]
