@@ -419,7 +419,7 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
     
     num_head_labels = max_seq_length
     head_labels_one_hot = tf.one_hot(head_label_ids, num_head_labels)
-    rel_labels_one_hot = tf.one_hot(label_ids, num_rel_labels)
+    rel_labels_one_hot = tf.one_hot(rel_label_ids, num_rel_labels)
 
     output = create_model(
         bert_config, is_training, input_ids, input_mask, segment_ids, head_labels_one_hot,
