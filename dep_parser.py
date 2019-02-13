@@ -44,7 +44,7 @@ class Parser(object):
 		return output
 
 
-	def get_arc_mask(logits, token_start_mask):
+	def get_arc_mask(self, logits, token_start_mask):
 		mask = tf.ones_like(logits, dtype=tf.float32)
 		mask_horizontal = tf.expand_dims(token_start_mask, axis=-1)
 		mask_vertical = tf.expand_dims(token_start_mask, axis=1)
