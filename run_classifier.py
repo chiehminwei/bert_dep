@@ -175,13 +175,13 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   """Converts a single `InputExample` into a single `InputFeatures`."""
   
   # -1 is for UNK and [SEP] and [CLS] (root)
-  rel_label_map = defaultdict(-1)
+  rel_label_map = defaultdict(lambda: -1)
   for (i, label) in enumerate(rel_label_list):    
     rel_label_map[label] = i
 
   # -1 is for index longer than max_seq_length
   # 0 is for [CLS] (root)
-  head_label_map = defaultdict(-1)
+  head_label_map = defaultdict(lambda: -1)
   for (i, label) in enumerate(head_label_list):
     real_label = int(label)
     head_label_map[label] = real_label
