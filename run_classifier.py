@@ -174,18 +174,19 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
                            tokenizer):
   """Converts a single `InputExample` into a single `InputFeatures`."""
   
-  # 0 is reserved for UNK, [CLS], and [SEP]
-  rel_label_map = defaultdict(int)
+  # -1 is for UNK and [SEP] and [CLS] (root)
+  rel_label_map = defaultdict(-1)
   for (i, label) in enumerate(rel_label_list):    
-    rel_label_map[label] = i + 1
+    rel_label_map[label] = i
 
-  # 0 is for index longer than max_seq_length
-  head_label_map = defaultdict(int)
+  # -1 is for index longer than max_seq_length
+  # 0 is for [CLS] (root)
+  head_label_map = defaultdict(-1)
   for (i, label) in enumerate(head_label_list):
     real_label = int(label)
     head_label_map[label] = real_label
     if real_label >= max_seq_length-1:
-        head_label_map[label] = 0
+        head_label_map[label] = -1
     
   # The convention in BERT is:
   # (a) For sequence pairs:
@@ -214,19 +215,19 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   # Token map will be an int -> int mapping between the `orig_tokens` index and the `bert_tokens` index.
   token_map = {}
   bert_tokens = []
-  token_start_idxs = []
+  token_start_idxs = [0]
   token_start_mask = [0] * max_seq_length
   head_label_ids = []
   rel_label_ids = []
   head_label_ids = [] # Similar to rel_label_ids, 0 is reserved for UNK, [CLS], and [SEP]
 
   bert_tokens.append("[CLS]")
-  rel_label_ids.append(0)
+  rel_label_ids.append(-1)
   head_label_ids.append(0)
   for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
     sub_tokens = tokenizer.tokenize(orig_token)
-    head_label_ids.extend([head_label_map[head_label]] * len(sub_tokens))
-    rel_label_ids.extend([rel_label_map[rel_label]] * len(sub_tokens))
+    head_label_ids.extend([head_label_map[head_label]] + [-1] * (len(sub_tokens)-1))
+    rel_label_ids.extend([rel_label_map[rel_label]] + [-1] * (len(sub_tokens)-1))
     # if label_map[rel_label] != 0:
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
@@ -245,8 +246,8 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 
 
   bert_tokens.append("[SEP]")
-  head_label_ids.append(0)
-  rel_label_ids.append(0)
+  head_label_ids.append(-1)
+  rel_label_ids.append(-1)
 
   input_ids = tokenizer.convert_tokens_to_ids(bert_tokens)
 
@@ -267,8 +268,8 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   # Zero-pad up to the sequence length.
   while len(input_ids) < max_seq_length:
     input_ids.append(0)
-    rel_label_ids.append(0)
-    head_label_ids.append(0)
+    rel_label_ids.append(-1)
+    head_label_ids.append(-1)
     input_mask.append(0)
 
   assert len(input_ids) == max_seq_length
