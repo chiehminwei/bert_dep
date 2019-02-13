@@ -79,6 +79,21 @@ class Parser(object):
 		return output
 
 
+	def rel_output(self, logits, labels_one_hot, token_start_mask):
+		probabilities = tf.nn.softmax(logits)
+		predictions = tf.math.argmax(logits, -1)
+		targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
+		accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, weights=token_start_mask)
+		loss = tf.losses.softmax_cross_entropy(labels_one_hot, logits, token_start_mask)
+		output = {
+			'probabilities': probabilities,
+			'predictions': predictions,
+			'accuracy': accuracy,
+			'loss': loss
+		}
+		return output
+
+
 	def MLP(self, inputs, arc_mlp_size, label_mlp_size):
 		inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	    
 		dep_mlp = tf.layers.dense(
@@ -152,14 +167,6 @@ class Parser(object):
 		logits2D = tf.reshape(logits4D, tf.stack([-1, n_classes]))
 		probabilities2D = tf.nn.softmax(logits2D)
 		return tf.reshape(probabilities2D, original_shape)
-
-
-	def rel_output(self, logits, targets, token_start_mask):
-		mask_horizontal = tf.expand_dims(token_start_mask, axis=-1)
-		probabilities = tf.nn.softmax(logits)
-		predictions = tf.math.argmax(logits, -1)
-		targets_for_accuracy = tf.math.argmax(targets, -1)
-		accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, weights=token_start_mask)
 
 
 def masked_logsoftmax(logits, mask):
