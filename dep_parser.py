@@ -106,7 +106,7 @@ class Parser(object):
 		input_size = inputs1.get_shape().as_list()[-1]
 		input_shape_to_set = [tf.Dimension(None), tf.Dimension(None), input_size+1]
 		output_shape = tf.stack([batch_size, bucket_size, n_classes, bucket_size])
-		if len(probs.get_shape().as_list()) == 2:
+		if not self.is_training:
 			# is not training
 			probs = tf.to_float(tf.one_hot(tf.to_int32(probs), bucket_size))
 		else:
