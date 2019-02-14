@@ -5,12 +5,13 @@ import linalg
 
 class Parser(object):
 
-	def __init__(self, initializers, is_training, mlp_droput_rate, arc_mlp_size=500, label_mlp_size=100):
+	def __init__(self, initializers, is_training, mlp_droput_rate, token_start_mask, arc_mlp_size=500, label_mlp_size=100):
 		self.initializers = initializers
 		self.is_training = is_training
 		self.mlp_droput_rate = mlp_droput_rate
 		self.arc_mlp_size = arc_mlp_size
 		self.label_mlp_size = label_mlp_size
+		self.token_start_mask = token_start_mask
 
 
 	def compute(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, token_start_mask):
@@ -61,7 +62,7 @@ class Parser(object):
 			output['probabilities'] = probabilities
 
 			targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
-			accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions)
+			accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, self.token_start_mask)
 			output['accuracy'] = accuracy
 
 		return output
