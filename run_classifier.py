@@ -251,7 +251,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 
   for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
     sub_tokens = tokenizer.tokenize(orig_token)
-    head_label_ids.extend([token_map[head_label_map[head_label]]] + [len(head_label_ids)] * (len(sub_tokens)-1))
+    head_label_ids.extend([token_map[head_label_map[head_label]]] + [len(head_label_ids)-1] * (len(sub_tokens)-1))
 
 
   bert_tokens.append("[SEP]")
