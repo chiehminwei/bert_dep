@@ -19,7 +19,7 @@ class Parser(object):
 			inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	 
 			mlp = tf.layers.dense(
 					inputs,
-					arc_mlp_size,
+					self.arc_mlp_size,
 					modeling.gelu,
 					kernel_initializer=self.initializers.xavier_initializer()) 
 			logits = tf.layers.dense(
