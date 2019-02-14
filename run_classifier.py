@@ -400,7 +400,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   mask = tf.to_float(token_start_mask)
   
   parser = Parser(initializers, is_training, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size)
-  output = parser.compute(embedding, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, mask)
+  output = parser.compute2(embedding, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, mask)
   return output
 
 
@@ -474,12 +474,20 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
     elif mode == tf.estimator.ModeKeys.EVAL:
 
       def metric_fn(output):
-        arc_accuracy = output['arc_accuracy']
-        rel_accuracy = output['rel_accuracy']
+
+        predictions = output['predictions']
+        probabilities = output['probabilities']
+        accuracy = output['accuracy']
+
+        # arc_accuracy = output['arc_accuracy']
+        # rel_accuracy = output['rel_accuracy']
         
         return {
-            "arc_accuracy": arc_accuracy,
-            "rel_accuracy": rel_accuracy
+            "predictions": predictions,
+            "probabilities": probabilities, 
+            "accuracy": accuracy
+            # "arc_accuracy": arc_accuracy,
+            # "rel_accuracy": rel_accuracy
         }
 
       eval_metrics = (metric_fn, [output])

@@ -13,6 +13,38 @@ class Parser(object):
 		self.label_mlp_size = label_mlp_size
 		self.token_start_mask = token_start_mask
 
+	def compute2(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, token_start_mask):
+		with tf.variable_scope('FML'):
+			batch_size, max_seq_length, embedding_size = modeling.get_shape_list(inputs, expected_rank=3)
+			inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	 
+			mlp = tf.layers.dense(
+					inputs,
+					arc_mlp_size,
+					modeling.gelu,
+					kernel_initializer=self.initializers.xavier_initializer()) 
+			logits = tf.layers.dense(
+					mlp,
+					embedding_size,
+					modeling.gelu,
+					kernel_initializer=self.initializers.xavier_initializer())
+			predictions = tf.math.argmax(logits, -1) # (batch_size, bucket_size) 
+			loss = tf.losses.softmax_cross_entropy(head_labels_one_hot, logits, weights=token_start_mask, label_smoothing=0.9)    
+			
+			output = {
+				'predictions': predictions,
+				'loss': loss
+			}
+
+			if not self.is_training:
+				probabilities = tf.nn.softmax(logits)
+				output['probabilities'] = probabilities
+
+				targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
+				accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, self.token_start_mask)
+				output['accuracy'] = accuracy
+
+			return output
+
 
 	def compute(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, token_start_mask):
 		with tf.variable_scope('MLP'):
