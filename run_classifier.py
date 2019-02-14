@@ -226,9 +226,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   head_label_ids.append(0)
   for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
     sub_tokens = tokenizer.tokenize(orig_token)
-    # head_label_ids.extend([head_label_map[head_label]] + [-1] * (len(sub_tokens)-1))
     rel_label_ids.extend([rel_label_map[rel_label]] + [-1] * (len(sub_tokens)-1))
-    # if label_map[rel_label] != 0:
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
 
@@ -243,13 +241,6 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
     rel_label_ids = rel_label_ids[:max_seq_length-1]
     return
 
-
-  bert_tokens.append("[SEP]")
-  head_label_ids.append(-1)
-  rel_label_ids.append(-1)
-
-  input_ids = tokenizer.convert_tokens_to_ids(bert_tokens)
-
   for start_idx in token_start_idxs:
     if start_idx >= max_seq_length: break
     token_start_mask[start_idx] = 1
@@ -260,7 +251,14 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 
   for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
     sub_tokens = tokenizer.tokenize(orig_token)
-    head_label_ids.extend([token_map[head_label_map[head_label]]] + [-1] * (len(sub_tokens)-1))
+    head_label_ids.extend([token_map[head_label_map[head_label]]] + [len(head_label_ids)] * (len(sub_tokens)-1))
+
+
+  bert_tokens.append("[SEP]")
+  head_label_ids.append(-1)
+  rel_label_ids.append(-1)
+
+  input_ids = tokenizer.convert_tokens_to_ids(bert_tokens)  
   
   # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
   input_mask = [1] * len(input_ids)
