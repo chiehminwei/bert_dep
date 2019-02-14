@@ -96,6 +96,7 @@ class CoNLLProcessor(DataProcessor):
     heads = []
     rels = []
     for line in lines:
+      if len(examples) == 64: return examples
       if len(line) == 10:
         word = line[1]
         tag_1 = line[3]
