@@ -38,6 +38,8 @@ class Parser(object):
 			output['arc_probabilities'] = arc_output['probabilities']
 			output['arc_accuracy'] = arc_output['accuracy']
 			output['rel_accuracy'] = rel_output['accuracy']
+			output['head_labels_one_hot'] = tf.math.argmax(head_labels_one_hot, -1)
+			output['rel_labels_one_hot'] = tf.math.argmax(rel_labels_one_hot, -1)
 
 		output['arc_predictions'] = arc_output['predictions']
 		output['rel_predictions'] = rel_output['predictions']		
