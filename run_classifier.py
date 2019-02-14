@@ -494,7 +494,7 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
          mode=mode,
          predictions={"arc_probabilities": arc_probabilities, "rel_probabilities": rel_probabilities, 
                       "arc_predictions": arc_predictions, "rel_predictions": rel_predictions, 
-                      "token_start_mask": token_start_mask, "input_mask": input_mask},
+                      "token_start_mask": token_start_mask, "input_mask": input_mask, "features": features},
          scaffold_fn=scaffold_fn)
 
     return output_spec
