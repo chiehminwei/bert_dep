@@ -21,7 +21,7 @@ class Parser(object):
 		
 		with tf.variable_scope('Arcs',):
 			arc_logits = self.bilinear_classifier(dep_arc_mlp, head_arc_mlp)
-			arc_output = self.arc_output(arc_logits, head_labels_one_hot, token_start_mask)
+			arc_output = self.output(arc_logits, head_labels_one_hot)
 			if self.is_training:
 				predictions = head_labels_one_hot
 			else:
@@ -29,68 +29,41 @@ class Parser(object):
 
 		with tf.variable_scope('Rels'):
 			rel_logits, rel_logits_cond = self.conditional_bilinear_classifier(dep_rel_mlp, head_rel_mlp, num_rel_labels, predictions)
-			rel_output = self.rel_output(rel_logits, rel_labels_one_hot, token_start_mask)
-			rel_output['probabilities'] = self.conditional_probabilities(rel_logits_cond)
-		
+			rel_output = self.output(rel_logits, rel_labels_one_hot)
+					
 		output = {}
-		output['probabilities'] = tf.tuple([arc_output['probabilities'],
-											rel_output['probabilities']])
+		if not self.is_training:
+			rel_output['probabilities'] = self.conditional_probabilities(rel_logits_cond)
+			output['probabilities'] = tf.tuple([arc_output['probabilities'],
+												rel_output['probabilities']])
+			output['arc_accuracy'] = arc_output['accuracy']
+			output['rel_accuracy'] = rel_output['accuracy']
+
 		output['predictions'] = tf.stack([arc_output['predictions'],
 										 rel_output['predictions']])
-		output['arc_accuracy'] = arc_output['accuracy']
-		output['rel_accuracy'] = rel_output['accuracy']
+		
 		output['loss'] = arc_output['loss'] + rel_output['loss'] 
 		
 		return output
 
 
-	def get_arc_mask(self, logits, token_start_mask):
-		mask = tf.ones_like(logits, dtype=tf.float32)
-		mask_horizontal = tf.expand_dims(token_start_mask, axis=-1)
-		mask_vertical = tf.expand_dims(token_start_mask, axis=1)
-		mask = mask * mask_horizontal * mask_vertical
-		return mask
-
-
-	def arc_output(self, logits, labels_one_hot, token_start_mask):
-		mask = self.get_arc_mask(logits, token_start_mask)
-
-		batch_size, max_seq_length, embedding_size = modeling.get_shape_list(logits, expected_rank=3)
-		lengths = tf.reduce_sum(mask, -1)
-		lengths_mask = tf.sequence_mask(lengths, embedding_size)
-		lengths_indices = tf.where(lengths_mask)
-		
-		dense_logsoftmax = dense_masked_logsoftmax(logits, mask, lengths_indices)
-		loss = cross_entropy(dense_logsoftmax, labels_one_hot)
-		
-		dense = to_dense(logits, mask, lengths_indices)
-		predictions = tf.math.argmax(dense, -1) # (batch_size, bucket_size) 
-
-		targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
-		accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, weights=token_start_mask)
+	def output(self, logits, labels_one_hot):		
+		predictions = tf.math.argmax(logits, -1) # (batch_size, bucket_size) 
+		loss = tf.losses.softmax_cross_entropy(labels_one_hot, logits, label_smoothing=0.9)    
 		
 		output = {
-			'probabilities': dense_logsoftmax,
 			'predictions': predictions,
-			'accuracy': accuracy,
 			'loss': loss
 		}
-		
-		return output
 
+		if not self.is_training:
+			probabilities = tf.nn.softmax(logits)
+			output['probabilities'] = probabilities
 
-	def rel_output(self, logits, labels_one_hot, token_start_mask):
-		probabilities = tf.nn.softmax(logits)
-		predictions = tf.math.argmax(logits, -1)
-		targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
-		accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, weights=token_start_mask)
-		loss = tf.losses.softmax_cross_entropy(labels_one_hot, logits, token_start_mask)
-		output = {
-			'probabilities': probabilities,
-			'predictions': predictions,
-			'accuracy': accuracy,
-			'loss': loss
-		}
+			targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
+			accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions)
+			output['accuracy'] = accuracy
+
 		return output
 
 
@@ -133,8 +106,11 @@ class Parser(object):
 		input_size = inputs1.get_shape().as_list()[-1]
 		input_shape_to_set = [tf.Dimension(None), tf.Dimension(None), input_size+1]
 		output_shape = tf.stack([batch_size, bucket_size, n_classes, bucket_size])
-
-		if self.is_training:
+		if len(proba.get_shape().as_list()) == 2:
+			# is not training
+			probs = tf.to_float(tf.one_hot(tf.to_int32(probs), bucket_size))
+		else:
+			# is training
 			probs = tf.stop_gradient(probs) # (batch_size, bucket_size, bucket_size)
 		
 		inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	 # (batch_size, bucket_size, arc_mlp_size) 
@@ -153,6 +129,7 @@ class Parser(object):
 						 moving_params=None)
 		weighted_bilin = tf.linalg.matmul(bilin, tf.expand_dims(probs, 3)) 
 		# (batch_size, bucket_size, n_classes, bucket_size) * (batch_size, bucket_size, bucket_size, 1) =>
+		# (batch_size, bucket_size, n_classes, 1)
 		weighted_bilin = tf.squeeze(weighted_bilin) # (batch_size, bucket_size, n_classes)
 		
 		return weighted_bilin, bilin
@@ -169,46 +146,3 @@ class Parser(object):
 		return tf.reshape(probabilities2D, original_shape)
 
 
-def masked_logsoftmax(logits, mask):
-	"""
-	Masked softmax over dim 1
-	:param logits: (N, L)
-	:param mask: (N, L)
-	:return: probabilities (N, L)
-	"""
-	indices = tf.where(mask)
-	values = tf.gather_nd(logits, indices)
-	denseShape = tf.cast(tf.shape(logits), tf.int64)
-	sparseResult = tf.sparse_softmax(tf.SparseTensor(indices, values, denseShape))
-	result = tf.scatter_nd(sparseResult.indices, tf.log(sparseResult.values), sparseResult.dense_shape)
-	result.set_shape(logits.shape)
-	result = tf.cast(result, tf.float32)
-	return result
-
-
-def dense_masked_logsoftmax(logits, mask, lengths_indices):
-	indices = tf.where(mask)
-	values = tf.gather_nd(logits, indices)
-	denseShape = tf.cast(tf.shape(logits), tf.int64)
-	sparseResult = tf.sparse_softmax(tf.SparseTensor(indices, values, denseShape))
-	result = tf.scatter_nd(lengths_indices, tf.log(sparseResult.values), sparseResult.dense_shape)
-	result.set_shape(logits.shape)
-	result = tf.cast(result, tf.float32)
-	return result
-
-
-def to_dense(logits, mask, lengths_indices):
-	indices = tf.where(mask)
-	values = tf.gather_nd(logits, indices)
-	denseShape = tf.cast(tf.shape(logits), tf.int64)
-	sparseResult = tf.SparseTensor(indices, values, denseShape)
-	result = tf.scatter_nd(lengths_indices, sparseResult.values, sparseResult.dense_shape)
-	result.set_shape(logits.shape)
-	result = tf.cast(result, tf.float32)
-	return result
-
-
-def cross_entropy(logsoftmax, labels_one_hot, label_smoothing=0.9):
-	loss = -logsoftmax * labels_one_hot * label_smoothing
-	loss = tf.reduce_sum(loss)
-	return loss

@@ -226,16 +226,14 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   head_label_ids.append(0)
   for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
     sub_tokens = tokenizer.tokenize(orig_token)
-    head_label_ids.extend([head_label_map[head_label]] + [-1] * (len(sub_tokens)-1))
+    # head_label_ids.extend([head_label_map[head_label]] + [-1] * (len(sub_tokens)-1))
     rel_label_ids.extend([rel_label_map[rel_label]] + [-1] * (len(sub_tokens)-1))
     # if label_map[rel_label] != 0:
     token_start_idxs.append(len(bert_tokens))
     bert_tokens.extend(sub_tokens)
 
-  # Account for [CLS] and [SEP]
   if len(bert_tokens) >= max_seq_length:
-    tf.logging.info("*** Truncating sentence ***")
-    tf.logging.info("length of tokens: %d" % (len(bert_tokens)))
+    tf.logging.info("*** Skipping sentence of length: %d tokens***" % (len(bert_tokens)))
     tf.logging.info("guid: %s" % (example.guid))
     tf.logging.info("tokens: %s" % " ".join(
         [tokenization.printable_text(x) for x in bert_tokens]))
@@ -243,6 +241,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
     bert_tokens = bert_tokens[:max_seq_length-1]
     head_label_ids = head_label_ids[:max_seq_length-1]
     rel_label_ids = rel_label_ids[:max_seq_length-1]
+    return
 
 
   bert_tokens.append("[SEP]")
@@ -259,7 +258,10 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
   for i, idx in enumerate(token_start_idxs):
     token_map[i] = idx
 
-
+  for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
+    sub_tokens = tokenizer.tokenize(orig_token)
+    head_label_ids.extend([token_map[head_label_map[head_label]]] + [-1] * (len(sub_tokens)-1))
+  
   # The mask has 1 for real tokens and 0 for padding tokens. Only real tokens are attended to.
   input_mask = [1] * len(input_ids)
 
@@ -313,6 +315,7 @@ def file_based_convert_examples_to_features(
 
     feature = convert_single_example(ex_index, example, head_label_list, rel_label_list,
                                      max_seq_length, tokenizer)
+    if not feature: continue
 
     def create_int_feature(values):
       f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
@@ -390,7 +393,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       token_type_ids=segment_ids,
       use_one_hot_embeddings=use_one_hot_embeddings)
   embedding = model.get_sequence_output()
-  # batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
+  batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
+  masked_embedding = tf.boolean_mask(embedding, token_start_mask)
   # lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
   mask = tf.to_float(token_start_mask)
   
