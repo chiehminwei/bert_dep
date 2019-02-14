@@ -487,9 +487,11 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
           scaffold_fn=scaffold_fn)
 
     else:
-      arc_probabilities, rel_probabilities = output['probabilities'] 
-      arc_predictions, rel_predictions = output['predictions']
-
+      rel_probabilities = output['rel_probabilities'] 
+      arc_probabilities = output['arc_probabilities'] 
+      arc_predictions = output['arc_predictions']
+      rel_predictions = output['rel_predictions'] 
+      
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
          predictions={"arc_probabilities": arc_probabilities, "rel_probabilities": rel_probabilities, 

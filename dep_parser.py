@@ -33,16 +33,14 @@ class Parser(object):
 			rel_output = self.output(rel_logits, rel_labels_one_hot)
 					
 		output = {}
-		if not self.is_training:
-			rel_output['probabilities'] = self.conditional_probabilities(rel_logits_cond)
-			output['probabilities'] = tf.tuple([arc_output['probabilities'],
-												rel_output['probabilities']])
+		if not self.is_training:			
+			output['rel_probabilities'] = self.conditional_probabilities(rel_logits_cond)
+			output['arc_probabilities'] = arc_output['probabilities']
 			output['arc_accuracy'] = arc_output['accuracy']
 			output['rel_accuracy'] = rel_output['accuracy']
 
-		output['predictions'] = tf.stack([arc_output['predictions'],
-										 rel_output['predictions']])
-		
+		output['arc_predictions'] = arc_output['predictions']
+		output['rel_predictions'] = rel_output['predictions']		
 		output['loss'] = arc_output['loss'] + rel_output['loss'] 
 		
 		return output
