@@ -20,12 +20,12 @@ class Parser(object):
 			mlp = tf.layers.dense(
 					inputs,
 					self.arc_mlp_size,
-					modeling.gelu,
+					tf.nn.relu,
 					kernel_initializer=self.initializers.xavier_initializer()) 
 			logits = tf.layers.dense(
 					mlp,
 					embedding_size,
-					modeling.gelu,
+					tf.nn.relu,
 					kernel_initializer=self.initializers.xavier_initializer())
 			predictions = tf.math.argmax(logits, -1) # (batch_size, bucket_size) 
 			loss = tf.losses.softmax_cross_entropy(head_labels_one_hot, logits, weights=token_start_mask, label_smoothing=0.9)    
@@ -105,13 +105,13 @@ class Parser(object):
 		dep_mlp = tf.layers.dense(
 					inputs,
 					arc_mlp_size + label_mlp_size,
-					modeling.gelu,
+					tf.nn.relu,
 					kernel_initializer=self.initializers.xavier_initializer())
 
 		head_mlp = tf.layers.dense(
 					inputs,
 					arc_mlp_size + label_mlp_size,
-					modeling.gelu,
+					tf.nn.relu,
 					kernel_initializer=self.initializers.xavier_initializer())
 		
 		return dep_mlp, head_mlp
