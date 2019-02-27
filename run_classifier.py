@@ -483,8 +483,8 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
         # rel_accuracy = output['rel_accuracy']
         
         return {
-            "predictions": predictions,
-            "probabilities": probabilities, 
+            # "predictions": predictions,
+            # "probabilities": probabilities, 
             "accuracy": accuracy
             # "arc_accuracy": arc_accuracy,
             # "rel_accuracy": rel_accuracy
