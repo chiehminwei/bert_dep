@@ -28,7 +28,7 @@ class Parser(object):
 					tf.nn.relu,
 					kernel_initializer=self.initializers.xavier_initializer())
 			predictions = tf.math.argmax(logits, -1) # (batch_size, bucket_size) 
-			loss = tf.losses.softmax_cross_entropy(head_labels_one_hot, logits, weights=token_start_mask, label_smoothing=0.9)    
+			loss = tf.losses.softmax_cross_entropy(head_labels_one_hot, logits, label_smoothing=0.9)    
 			
 			output = {
 				'predictions': predictions,
