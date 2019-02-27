@@ -39,7 +39,7 @@ class Parser(object):
 				probabilities = tf.nn.softmax(logits)
 				output['probabilities'] = probabilities
 
-				targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
+				targets_for_accuracy = tf.math.argmax(head_labels_one_hot, -1)
 				accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, self.token_start_mask)
 				output['accuracy'] = accuracy
 
