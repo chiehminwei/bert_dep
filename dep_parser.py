@@ -1,4 +1,4 @@
-import modeling
+import modeling.gelu as gelu
 import numpy as np
 import tensorflow as tf
 import linalg
@@ -104,7 +104,7 @@ class Parser(object):
 		mlp = tf.layers.dense(
 					inputs,
 					mlp_size,
-					tf.nn.leaky_relu(alpha=0.1),
+					gelu,
 					kernel_initializer=tf.orthogonal_initializer())
 		mlp = tf.layers.dropout(mlp, self.mlp_droput_rate, training=self.is_training)			
 		return mlp
