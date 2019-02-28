@@ -1,4 +1,4 @@
-import modeling.gelu as gelu
+from modeling import gelu
 import numpy as np
 import tensorflow as tf
 import linalg
