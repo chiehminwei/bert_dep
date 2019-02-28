@@ -55,12 +55,14 @@ class Parser(object):
 		output['loss'] = loss
 		
 		if not self.is_training:
-			pred_heads, pred_labels = self.decode(s_arc, s_lab)
-			arc_accuracy, rel_accuracy = self.get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels)
+			#pred_heads, pred_labels = self.decode(s_arc, s_lab)
+			pred_heads = self.decode(s_arc, s_lab)
+			arc_accuracy = self.get_accuracy(pred_heads, None, gold_heads, gold_labels)
+			#arc_accuracy, rel_accuracy = self.get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels)
 			output['arc_accuracy'] = arc_accuracy
-			output['rel_accuracy'] = rel_accuracy
+			#output['rel_accuracy'] = rel_accuracy
 			output['arc_predictions'] = pred_heads
-			output['rel_predictions'] = pred_labels
+			#output['rel_predictions'] = pred_labels
 		return output
 		
 
@@ -69,22 +71,22 @@ class Parser(object):
 		gold_heads = tf.one_hot(gold_heads, self.num_head_labels)
 		gold_labels = tf.one_hot(gold_labels, self.num_rel_labels)
 		arc_loss = tf.losses.softmax_cross_entropy(gold_heads, s_arc, weights=self.token_start_mask, label_smoothing=0.9)  
-		#lab_loss = tf.losses.softmax_cross_entropy(gold_labels, s_lab, weight=self.token_start_mask, label_smoothing=0.9)
+		#lab_loss = tf.losses.softmax_cross_entropy(gold_labels, s_lab, weights=self.token_start_mask, label_smoothing=0.9)
 		loss = arc_loss
 		# loss = arc_loss + lab_loss
 		return loss
 
 	def decode(self, s_arc, s_lab):
 		pred_heads = tf.argmax(s_arc, -1)
-		s_lab = self.select_indices(s_lab, pred_heads)
-		pred_labels = tf.argmax(s_lab, -1)
-
-		return pred_heads, pred_labels
+		#s_lab = self.select_indices(s_lab, pred_heads)
+		#pred_labels = tf.argmax(s_lab, -1)
+		return pred_heads
+		#return pred_heads, pred_labels
 
 	def get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels):
 		arc_accuracy = tf.metrics.accuracy(gold_heads, pred_heads, self.token_start_mask)
-		rel_accuracy = tf.metrics.accuracy(gold_labels, pred_labels, self.token_start_mask)
-		return arc_accuracy, rel_accuracy
+		#rel_accuracy = tf.metrics.accuracy(gold_labels, pred_labels, self.token_start_mask)
+		return arc_accuracy#, rel_accuracy
 
 
 	def MLP(self, inputs, mlp_size):
@@ -127,8 +129,15 @@ class Parser(object):
 
 		return s
 
-	def select_indices(self, inputs, indices):
-		# [batch_size, seq_len, seq_len, n_out]
-		nd_indices = tf.stack([tf.range(tf.shape(inputs)[0]), indices], axis=1)
+	def select_indices(inputs, indices):
+		# inputs = [batch_size, seq_len, seq_len, n_out]
+		# indices = [batch_size, seq_len]
+		# Construct nd_indices
+		batch_size, seq_len = modeling.get_shape_list(indices, expected_rank=2)
+
+		batches = tf.broadcast_to(tf.reshape(tf.range(batch_size),[batch_size,1]),[batch_size, seq_len])
+		seqs = tf.broadcast_to(tf.range(seq_len), [batch_size, seq_len])
+
+		nd_indices = tf.stack([batches, seqs, indices], axis=2)
 		result = tf.gather_nd(inputs, nd_indices)
 		return result
