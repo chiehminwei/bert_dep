@@ -1,4 +1,4 @@
-from modeling import gelu
+import modeling
 import numpy as np
 import tensorflow as tf
 import linalg
@@ -16,9 +16,11 @@ class Biaffine(object):
 									initializer=tf.zeros_initializer)
 
 		if self.bias_x:
-			x = tf.concat([x, tf.expand_dims(tf.ones(tf.shape(x)[-1]), -1)], -1)
+			batch_size, max_seq_length, embedding_size = modeling.get_shape_list(x, expected_rank=3)
+			x = tf.concat([x, tf.ones(tf.stack([batch_size, max_seq_length, 1]))], 2)
 		if self.bias_y:
-			y = tf.comcat([y, tf.expand_dims(tf.ones(tf.shape(y)[-1]), -1)], -1)
+			batch_size, max_seq_length, embedding_size = modeling.get_shape_list(y, expected_rank=3)
+			y = tf.concat([y, tf.ones(tf.stack([batch_size, max_seq_length, 1]))], 2)
 		# [batch_size, 1, seq_len, d]
 		x = tf.expand_dims(x, 1)
 		# [batch_size, 1, seq_len, d]
@@ -64,10 +66,11 @@ class Parser(object):
 		s_lab = tf.transpose(lab_attn, perm=[0, 2, 3, 1])
 
 		output = {}
-		if self.is_training:
-			loss = self.get_loss(s_arc, s_lab, gold_heads, gold_labels)
-			output['loss'] = loss
-		else:
+		
+		loss = self.get_loss(s_arc, s_lab, gold_heads, gold_labels)
+		output['loss'] = loss
+		
+		if not self.is_training:
 			pred_heads, pred_labels = self.decode(s_arc, s_lab)
 			arc_accuracy, rel_accuracy = self.get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels)
 			output['arc_accuracy'] = arc_accuracy
@@ -104,7 +107,7 @@ class Parser(object):
 		mlp = tf.layers.dense(
 					inputs,
 					mlp_size,
-					gelu,
+					modeling.gelu,
 					kernel_initializer=tf.orthogonal_initializer())
 		mlp = tf.layers.dropout(mlp, self.mlp_droput_rate, training=self.is_training)			
 		return mlp
