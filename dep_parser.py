@@ -65,13 +65,13 @@ class Parser(object):
 		
 
 	def get_loss(self, s_arc, s_lab, gold_heads, gold_labels):
-		s_lab = self.select_indices(s_lab, gold_heads)		
+		# s_lab = self.select_indices(s_lab, gold_heads)		
 		gold_heads = tf.one_hot(gold_heads, self.num_head_labels)
 		gold_labels = tf.one_hot(gold_labels, self.num_rel_labels)
 		arc_loss = tf.losses.softmax_cross_entropy(gold_heads, s_arc, weight=self.token_start_mask, label_smoothing=0.9)  
-		lab_loss = tf.losses.softmax_cross_entropy(gold_labels, s_lab, weight=self.token_start_mask, label_smoothing=0.9)
-
-		loss = arc_loss + lab_loss
+		#lab_loss = tf.losses.softmax_cross_entropy(gold_labels, s_lab, weight=self.token_start_mask, label_smoothing=0.9)
+		loss = arc_loss
+		# loss = arc_loss + lab_loss
 		return loss
 
 	def decode(self, s_arc, s_lab):
@@ -128,6 +128,7 @@ class Parser(object):
 		return s
 
 	def select_indices(self, inputs, indices):
+		# [batch_size, seq_len, seq_len, n_out]
 		nd_indices = tf.stack([tf.range(tf.shape(inputs)[0]), indices], axis=1)
 		result = tf.gather_nd(inputs, nd_indices)
 		return result
