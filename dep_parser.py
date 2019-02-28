@@ -113,10 +113,10 @@ class Parser(object):
 			y = tf.concat([y, tf.ones(tf.stack([batch_size, max_seq_length, 1]))], 2)
 		# [batch_size, 1, seq_len, d]
 		x = tf.expand_dims(x, 1)
-		x = tf.broad_cast_to(x, [batch_size, n_out, max_seq_length, n_in + bias_x])
+		x = tf.broadcast_to(x, [batch_size, n_out, max_seq_length, n_in + bias_x])
 		# [batch_size, 1, seq_len, d]
 		y = tf.expand_dims(y, 1)
-		y = tf.broad_cast_to(y, [batch_size, n_out, max_seq_length, n_in + bias_y])
+		y = tf.broadcast_to(y, [batch_size, n_out, max_seq_length, n_in + bias_y])
 		# [batch_size, 1, seq_len, d_1] @ [batch_size, n_out, d_1, d_2] @ [batch_size, 1, d_2, seq_len]
 		# => [batch_size, n_out, seq_len, d_2] @ [batch_size, 1, d_2, seq_len]
 		# => [batch_size, n_out, seq_len, seq_len]
