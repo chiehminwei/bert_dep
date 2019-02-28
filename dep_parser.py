@@ -84,7 +84,7 @@ class Parser(object):
 		#return pred_heads
 		return pred_heads, pred_labels
 
-	def get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels):
+	def get_accuracy(self, pred_heads, pred_labels, gold_heads, gold_labels):
 		arc_accuracy = tf.metrics.accuracy(gold_heads, pred_heads, self.token_start_mask)
 		rel_accuracy = tf.metrics.accuracy(gold_labels, pred_labels, self.token_start_mask)
 		return arc_accuracy, rel_accuracy
