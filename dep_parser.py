@@ -133,6 +133,7 @@ class Parser(object):
 		# inputs = [batch_size, seq_len, seq_len, n_out]
 		# indices = [batch_size, seq_len]
 		# Construct nd_indices
+		indices = tf.cast(indices, dtype=tf.int32)
 		batch_size, seq_len = modeling.get_shape_list(indices, expected_rank=2)
 
 		batches = tf.broadcast_to(tf.reshape(tf.range(batch_size),[batch_size,1]),[batch_size, seq_len])
