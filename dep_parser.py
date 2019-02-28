@@ -95,6 +95,7 @@ class Parser(object):
 		batch_size, max_seq_length, embedding_size = modeling.get_shape_list(x, expected_rank=3)
 		self.weight = tf.get_variable("biaffine_weight", 
 									[batch_size, n_out, n_in + bias_x, n_in + bias_y], 
+									reuse=True,
 									dtype=tf.float32,
 									initializer=tf.zeros_initializer)
 
