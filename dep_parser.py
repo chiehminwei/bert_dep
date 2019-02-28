@@ -68,7 +68,7 @@ class Parser(object):
 		# s_lab = self.select_indices(s_lab, gold_heads)		
 		gold_heads = tf.one_hot(gold_heads, self.num_head_labels)
 		gold_labels = tf.one_hot(gold_labels, self.num_rel_labels)
-		arc_loss = tf.losses.softmax_cross_entropy(gold_heads, s_arc, weight=self.token_start_mask, label_smoothing=0.9)  
+		arc_loss = tf.losses.softmax_cross_entropy(gold_heads, s_arc, weights=self.token_start_mask, label_smoothing=0.9)  
 		#lab_loss = tf.losses.softmax_cross_entropy(gold_labels, s_lab, weight=self.token_start_mask, label_smoothing=0.9)
 		loss = arc_loss
 		# loss = arc_loss + lab_loss
