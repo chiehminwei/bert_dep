@@ -107,7 +107,7 @@ class Parser(object):
 		self.weight = tf.get_variable("biaffine_weight", 
 									[batch_size, n_out, n_in + bias_x, n_in + bias_y],
 									dtype=tf.float32,
-									initializer=tf.zeros_initializer())
+									initializer=tf.zeros_initializer(shape=[batch_size, n_out, n_in + bias_x, n_in + bias_y]))
 
 		if self.bias_x:
 			x = tf.concat([x, tf.ones(tf.stack([batch_size, max_seq_length, 1]))], 2)
