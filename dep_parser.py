@@ -22,23 +22,32 @@ class Parser(object):
 	def __call__(self, inputs, gold_heads, gold_labels):
 		
 		inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	
-		arc_h = self.MLP(inputs, self.arc_mlp_size)
-		arc_d = self.MLP(inputs, self.arc_mlp_size)
-		lab_h = self.MLP(inputs, self.label_mlp_size)
-		lab_d = self.MLP(inputs, self.label_mlp_size)
+		with tf.variable_scope('arc_h', reuse=tf.AUTO_REUSE):
+			arc_h = self.MLP(inputs, self.arc_mlp_size)
 
-		s_arc = self.biaffine(arc_d, arc_h, 
-						n_in=self.arc_mlp_size,
-						bias_x=True,
-						bias_y=False)
+		with tf.variable_scope('arc_d', reuse=tf.AUTO_REUSE):
+			arc_d = self.MLP(inputs, self.arc_mlp_size)
 
-		lab_attn = self.biaffine(lab_d, lab_h, 
-							n_in=self.label_mlp_size,
-							n_out=self.num_rel_labels,
+		with tf.variable_scope('lab_h', reuse=tf.AUTO_REUSE):
+			lab_h = self.MLP(inputs, self.label_mlp_size)
+			
+		with tf.variable_scope('lab_d', reuse=tf.AUTO_REUSE):
+			lab_d = self.MLP(inputs, self.label_mlp_size)
+
+		with tf.variable_scope('s_arc', reuse=tf.AUTO_REUSE):
+			s_arc = self.biaffine(arc_d, arc_h, 
+							n_in=self.arc_mlp_size,
 							bias_x=True,
-							bias_y=True)
+							bias_y=False)
 
-		s_lab = tf.transpose(lab_attn, perm=[0, 2, 3, 1])
+		with tf.variable_scope('s_lab', reuse=tf.AUTO_REUSE):
+			lab_attn = self.biaffine(lab_d, lab_h, 
+								n_in=self.label_mlp_size,
+								n_out=self.num_rel_labels,
+								bias_x=True,
+								bias_y=True)
+
+			s_lab = tf.transpose(lab_attn, perm=[0, 2, 3, 1])
 
 		output = {}
 		
@@ -94,8 +103,7 @@ class Parser(object):
 		self.bias_y = bias_y
 		batch_size, max_seq_length, embedding_size = modeling.get_shape_list(x, expected_rank=3)
 		self.weight = tf.get_variable("biaffine_weight", 
-									[batch_size, n_out, n_in + bias_x, n_in + bias_y], 
-									reuse=True,
+									[batch_size, n_out, n_in + bias_x, n_in + bias_y],
 									dtype=tf.float32,
 									initializer=tf.zeros_initializer)
 
