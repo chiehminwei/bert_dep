@@ -384,7 +384,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 								 head_label_ids, rel_label_ids, num_head_labels, num_rel_labels, 
-								 use_one_hot_embeddings, token_start_mask, mlp_droupout_rate, arc_mlp_size, label_mlp_size):
+								 use_one_hot_embeddings, token_start_mask, mlp_droupout_rate, arc_mlp_size, label_mlp_size, batch_size):
 	"""Creates a classification model."""
 	model = modeling.BertModel(
 			config=bert_config,
@@ -398,14 +398,14 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 	# lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
 	# mask = tf.to_float(token_start_mask)
 	
-	parser = Parser(is_training, num_head_labels, num_rel_labels, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size)
+	parser = Parser(is_training, num_head_labels, num_rel_labels, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size, batch_size)
 	output = parser(embedding, head_label_ids, rel_label_ids)
 	return output
 
 
 def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate,
 										 num_train_steps, num_warmup_steps, use_tpu,
-										 use_one_hot_embeddings, max_seq_length, mlp_droupout_rate, arc_mlp_size, label_mlp_size):
+										 use_one_hot_embeddings, max_seq_length, mlp_droupout_rate, arc_mlp_size, label_mlp_size, batch_size):
 	"""Returns `model_fn` closure for TPUEstimator."""
 
 	def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -428,7 +428,7 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 		output = create_model(
 				bert_config, is_training, input_ids, input_mask, segment_ids, head_label_ids,
 				rel_label_ids, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask,
-				mlp_droupout_rate, arc_mlp_size, label_mlp_size)
+				mlp_droupout_rate, arc_mlp_size, label_mlp_size, batch_size)
 
 		total_loss = output['loss']
 

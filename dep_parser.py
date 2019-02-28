@@ -9,7 +9,7 @@ import linalg
 
 class Parser(object):
 
-	def __init__(self, is_training, num_head_labels, num_rel_labels, mlp_droput_rate, token_start_mask, arc_mlp_size, label_mlp_size):
+	def __init__(self, is_training, num_head_labels, num_rel_labels, mlp_droput_rate, token_start_mask, arc_mlp_size, label_mlp_size, batch_size):
 		self.is_training = is_training
 		self.mlp_droput_rate = mlp_droput_rate
 		self.arc_mlp_size = arc_mlp_size
@@ -17,6 +17,7 @@ class Parser(object):
 		self.token_start_mask = token_start_mask
 		self.num_head_labels = num_head_labels
 		self.num_rel_labels = num_rel_labels		
+		self.batch_size = batch_size
 
 
 	def __call__(self, inputs, gold_heads, gold_labels):
@@ -105,7 +106,7 @@ class Parser(object):
 		self.bias_y = bias_y
 		batch_size, max_seq_length, embedding_size = modeling.get_shape_list(x, expected_rank=3)
 		self.weight = tf.get_variable("biaffine_weight", 
-									shape=[batch_size, n_out, n_in + bias_x, n_in + bias_y],
+									shape=[self.batch_size, n_out, n_in + bias_x, n_in + bias_y],
 									dtype=tf.float32)
 
 		if self.bias_x:
