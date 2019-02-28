@@ -399,8 +399,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
   mask = tf.to_float(token_start_mask)
   
-  parser = Parser(initializers, is_training, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size)
-  output = parser.compute2(embedding, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, mask)
+  parser = Parser(is_training, num_head_labels, num_rel_labels, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size)
+  output = parser(embedding, head_labels, rel_labels)
   return output
 
 
@@ -475,19 +475,12 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 
       def metric_fn(output):
 
-        predictions = output['predictions']
-        probabilities = output['probabilities']
-        accuracy = output['accuracy']
-
-        # arc_accuracy = output['arc_accuracy']
-        # rel_accuracy = output['rel_accuracy']
+        arc_accuracy = output['arc_accuracy']
+        rel_accuracy = output['rel_accuracy']
         
         return {
-            # "predictions": predictions,
-            # "probabilities": probabilities, 
-            "accuracy": accuracy
-            # "arc_accuracy": arc_accuracy,
-            # "rel_accuracy": rel_accuracy
+            "arc_accuracy": arc_accuracy,
+            "rel_accuracy": rel_accuracy
         }
 
       eval_metrics = (metric_fn, [output])
@@ -498,19 +491,12 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
           scaffold_fn=scaffold_fn)
 
     else:
-      rel_probabilities = output['rel_probabilities'] 
-      arc_probabilities = output['arc_probabilities'] 
       arc_predictions = output['arc_predictions']
       rel_predictions = output['rel_predictions'] 
-      head_labels_one_hot = output['head_labels_one_hot'] 
-      rel_labels_one_hot = output['rel_labels_one_hot'] 
 
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
          mode=mode,
-         predictions={"arc_probabilities": arc_probabilities, "rel_probabilities": rel_probabilities, 
-                      "arc_predictions": arc_predictions, "rel_predictions": rel_predictions, 
-                      "head_labels_one_hot": head_labels_one_hot, "rel_labels_one_hot": rel_labels_one_hot,
-                      "token_start_mask": token_start_mask, "input_mask": input_mask},
+         predictions={"arc_predictions": arc_predictions, "rel_predictions": rel_predictions},
          scaffold_fn=scaffold_fn)
 
     return output_spec

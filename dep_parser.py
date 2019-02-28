@@ -3,179 +3,113 @@ import numpy as np
 import tensorflow as tf
 import linalg
 
+class Biaffine(object):
+
+    def __init__(self, x, y, n_in, n_out=1, bias_x=True, bias_y=True):
+        self.n_in = n_in
+        self.n_out = n_out
+        self.bias_x = bias_x
+        self.bias_y = bias_y
+        self.weight = tf.get_variable("biaffine_weight", 
+						        	[n_out, n_in + bias_x, n_in + bias_y], 
+						        	dtype=tf.float32,
+						  			initializer=tf.zeros_initializer)
+
+        if self.bias_x:
+            x = tf.concat([x, tf.expand_dims(tf.ones(tf.shape(x)[-1]), -1)], -1)
+        if self.bias_y:
+            y = tf.comcat([y, tf.expand_dims(tf.ones(tf.shape(y)[-1]), -1)], -1)
+        # [batch_size, 1, seq_len, d]
+        x = tf.expand_dims(x, 1)
+        # [batch_size, 1, seq_len, d]
+        y = tf.expand_dims(y, 1)
+        # [batch_size, n_out, seq_len, seq_len]
+        s = x @ self.weight @ tf.transpose(y, perm=[0, 1, 3, 2])
+        # remove dim 1 if n_out == 1
+        s = tf.squeeze(s, 1)
+
+        return s
+
 class Parser(object):
 
-	def __init__(self, initializers, is_training, mlp_droput_rate, token_start_mask, arc_mlp_size=500, label_mlp_size=100):
-		self.initializers = initializers
+	def __init__(self, is_training, num_head_labels, num_rel_labels, mlp_droput_rate, token_start_mask, arc_mlp_size, label_mlp_size):
 		self.is_training = is_training
 		self.mlp_droput_rate = mlp_droput_rate
 		self.arc_mlp_size = arc_mlp_size
 		self.label_mlp_size = label_mlp_size
 		self.token_start_mask = token_start_mask
-
-	def compute2(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, token_start_mask):
-		with tf.variable_scope('FML'):
-			batch_size, max_seq_length, embedding_size = modeling.get_shape_list(inputs, expected_rank=3)
-			inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	 
-			mlp = tf.layers.dense(
-					inputs,
-					self.arc_mlp_size,
-					tf.nn.relu,
-					kernel_initializer=self.initializers.xavier_initializer()) 
-			logits = tf.layers.dense(
-					mlp,
-					max_seq_length,
-					tf.nn.relu,
-					kernel_initializer=self.initializers.xavier_initializer())
-			predictions = tf.math.argmax(logits, -1) # (batch_size, bucket_size) 
-			loss = tf.losses.softmax_cross_entropy(head_labels_one_hot, logits, label_smoothing=0.9)    
-			
-			output = {
-				'predictions': predictions,
-				'loss': loss
-			}
-
-			if not self.is_training:
-				probabilities = tf.nn.softmax(logits)
-				output['probabilities'] = probabilities
-
-				targets_for_accuracy = tf.math.argmax(head_labels_one_hot, -1)
-				accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, self.token_start_mask)
-				output['accuracy'] = accuracy
-
-			return output
+		self.num_head_labels = num_head_labels
+		self.num_rel_labels = num_rel_labels		
 
 
-	def compute(self, inputs, head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, token_start_mask):
-		with tf.variable_scope('MLP'):
-			dep_mlp, head_mlp = self.MLP(inputs, self.arc_mlp_size, self.label_mlp_size)
-			dep_arc_mlp, dep_rel_mlp = dep_mlp[:,:,:self.arc_mlp_size], dep_mlp[:,:,self.arc_mlp_size:]
-			head_arc_mlp, head_rel_mlp = head_mlp[:,:,:self.arc_mlp_size], head_mlp[:,:,self.arc_mlp_size:]
+	def __call__(self, inputs, gold_heads, gold_labels):
 		
-		with tf.variable_scope('Arcs',):
-			arc_logits = self.bilinear_classifier(dep_arc_mlp, head_arc_mlp)
-			arc_output = self.output(arc_logits, head_labels_one_hot)
-			if self.is_training:
-				predictions = head_labels_one_hot
-			else:
-				predictions = arc_output['predictions']				
+		inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	
+		arc_h = self.MLP(inputs, self.arc_mlp_size)
+		arc_d = self.MLP(inputs, self.arc_mlp_size)
+		lab_h = self.MLP(inputs, self.label_mlp_size)
+		lab_d = self.MLP(inputs, self.label_mlp_size)
 
-		with tf.variable_scope('Rels'):
-			rel_logits, rel_logits_cond = self.conditional_bilinear_classifier(dep_rel_mlp, head_rel_mlp, num_rel_labels, predictions)
-			rel_output = self.output(rel_logits, rel_labels_one_hot)
-					
+		s_arc = Biaffine(arc_d, arc_h, 
+						n_in=self.arc_mlp_size,
+						bias_x=True,
+						bias_y=False)
+
+		lab_attn = Biaffine(lab_d, lab_h, 
+							n_in=self.label_mlp_size,
+							n_out=self.num_rel_labels,
+							bias_x=True,
+							bias_y=True)
+
+		s_lab = tf.transpose(lab_attn, perm=[0, 2, 3, 1])
+
 		output = {}
-		if not self.is_training:			
-			output['rel_probabilities'] = self.conditional_probabilities(rel_logits_cond)
-			output['arc_probabilities'] = arc_output['probabilities']
-			output['arc_accuracy'] = arc_output['accuracy']
-			output['rel_accuracy'] = rel_output['accuracy']
-			output['head_labels_one_hot'] = tf.math.argmax(head_labels_one_hot, -1)
-			output['rel_labels_one_hot'] = tf.math.argmax(rel_labels_one_hot, -1)
-
-		output['arc_predictions'] = arc_output['predictions']
-		output['rel_predictions'] = rel_output['predictions']		
-		output['loss'] = arc_output['loss'] + rel_output['loss'] 
-		
-		return output
-
-
-	def output(self, logits, labels_one_hot):		
-		predictions = tf.math.argmax(logits, -1) # (batch_size, bucket_size) 
-		loss = tf.losses.softmax_cross_entropy(labels_one_hot, logits, label_smoothing=0.9)    
-		
-		output = {
-			'predictions': predictions,
-			'loss': loss
-		}
-
-		if not self.is_training:
-			probabilities = tf.nn.softmax(logits)
-			output['probabilities'] = probabilities
-
-			targets_for_accuracy = tf.math.argmax(labels_one_hot, -1)
-			accuracy = tf.metrics.accuracy(targets_for_accuracy, predictions, self.token_start_mask)
-			output['accuracy'] = accuracy
-
-		return output
-
-
-	def MLP(self, inputs, arc_mlp_size, label_mlp_size):
-		inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	    
-		dep_mlp = tf.layers.dense(
-					inputs,
-					arc_mlp_size + label_mlp_size,
-					tf.nn.relu,
-					kernel_initializer=self.initializers.xavier_initializer())
-
-		head_mlp = tf.layers.dense(
-					inputs,
-					arc_mlp_size + label_mlp_size,
-					tf.nn.relu,
-					kernel_initializer=self.initializers.xavier_initializer())
-		
-		return dep_mlp, head_mlp
-
-
-	def bilinear_classifier(self, inputs1, inputs2, add_bias1=True, add_bias2=False):
-		inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	    
-		inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	    
-		
-		# bilin = (batch_size, bucket_size, n_classes, bucket_size)
-		bilin = linalg.bilinear(inputs1, inputs2, 1,
-								add_bias1=add_bias1,
-								add_bias2=add_bias2,
-								initializer=tf.zeros_initializer,
-								moving_params=None)
-		# output = (batch_size, bucket_size, bucket_size)
-		output = tf.squeeze(bilin)
-		return output
-
-
-	def conditional_bilinear_classifier(self, inputs1, inputs2, n_classes, probs, add_bias1=True, add_bias2=True):
-		input_shape = tf.shape(inputs1)
-		batch_size = input_shape[0]
-		bucket_size = input_shape[1]
-		input_size = inputs1.get_shape().as_list()[-1]
-		input_shape_to_set = [tf.Dimension(None), tf.Dimension(None), input_size+1]
-		output_shape = tf.stack([batch_size, bucket_size, n_classes, bucket_size])
-		if not self.is_training:
-			# is not training
-			probs = tf.to_float(tf.one_hot(tf.to_int32(probs), bucket_size))
+		if self.is_training:
+			loss = self.get_loss(s_arc, s_lab, gold_heads, gold_labels)
+			output['loss'] = loss
 		else:
-			# is training
-			probs = tf.stop_gradient(probs) # (batch_size, bucket_size, bucket_size)
+			pred_heads, pred_labels = self.decode(s_arc, s_lab)
+			arc_accuracy, rel_accuracy = self.get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels)
+			output['arc_accuracy'] = arc_accuracy
+			output['rel_accuracy'] = rel_accuracy
+			output['arc_predictions'] = pred_heads
+			output['rel_predictions'] = pred_labels
+		return output
 		
-		inputs1 = tf.layers.dropout(inputs1, self.mlp_droput_rate, training=self.is_training)	 # (batch_size, bucket_size, arc_mlp_size) 
-		inputs2 = tf.layers.dropout(inputs2, self.mlp_droput_rate, training=self.is_training)	 # (batch_size, bucket_size, label_mlp_size)
-		
-		inputs1 = tf.concat([inputs1, tf.ones(tf.stack([batch_size, bucket_size, 1]))], 2)
-		inputs1.set_shape(input_shape_to_set)
-		inputs2 = tf.concat([inputs2, tf.ones(tf.stack([batch_size, bucket_size, 1]))], 2)
-		inputs2.set_shape(input_shape_to_set)
-		
-		bilin = linalg.bilinear(inputs1, inputs2,   # bilin = (batch_size, bucket_size, n_classes, bucket_size)
-						 n_classes,
-						 add_bias1=add_bias1,
-						 add_bias2=add_bias2,
-						 initializer=tf.zeros_initializer,
-						 moving_params=None)
-		weighted_bilin = tf.linalg.matmul(bilin, tf.expand_dims(probs, 3)) 
-		# (batch_size, bucket_size, n_classes, bucket_size) * (batch_size, bucket_size, bucket_size, 1) =>
-		# (batch_size, bucket_size, n_classes, 1)
-		weighted_bilin = tf.squeeze(weighted_bilin) # (batch_size, bucket_size, n_classes)
-		
-		return weighted_bilin, bilin
 
-		
-	def conditional_probabilities(self, logits4D, transpose=True):
-		if transpose:									 # logits4D = (batch_size, bucket_size, n_classes, bucket_size)
-		  logits4D = tf.transpose(logits4D, [0,1,3,2])   # logits4D = (batch_size, bucket_size, bucket_size, n_classes)
-		original_shape = tf.shape(logits4D)
-		n_classes = original_shape[3]
-		
-		logits2D = tf.reshape(logits4D, tf.stack([-1, n_classes]))
-		probabilities2D = tf.nn.softmax(logits2D)
-		return tf.reshape(probabilities2D, original_shape)
+	def get_loss(self, s_arc, s_lab, gold_heads, gold_labels):
+		s_lab = self.select_indices(s_lab, gold_heads)		
+		gold_heads = tf.one_hot(gold_heads, self.num_head_labels)
+		gold_labels = tf.one_hot(gold_labels, self.num_rel_labels)
+		arc_loss = tf.losses.softmax_cross_entropy(gold_heads, s_arc, weight=self.token_start_mask, label_smoothing=0.9)  
+		lab_loss = tf.losses.softmax_cross_entropy(gold_labels, s_lab, weight=self.token_start_mask, label_smoothing=0.9)
+
+		loss = arc_loss + lab_loss
+		return loss
+
+	def decode(self, s_arc, s_lab):
+		pred_heads = tf.argmax(s_arc, -1)
+        s_lab = self.select_indices(s_lab, pred_heads)
+        pred_labels = tf.argmax(s_lab, -1)
+
+        return pred_heads, pred_labels
+
+    def get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels):
+    	arc_accuracy = tf.metrics.accuracy(gold_heads, pred_heads, self.token_start_mask)
+    	rel_accuracy = tf.metrics.accuracy(gold_labels, pred_labels, self.token_start_mask)
+    	return arc_accuracy, rel_accuracy
 
 
+	def MLP(self, inputs, mlp_size):
+		mlp = tf.layers.dense(
+					inputs,
+					mlp_size,
+					tf.nn.leaky_relu(alpha=0.1),
+					kernel_initializer=tf.orthogonal_initializer())
+		mlp = tf.layers.dropout(mlp, self.mlp_droput_rate, training=self.is_training)			
+		return mlp
+
+	def select_indices(inputs, indices):
+		nd_indices = tf.stack([tf.range(tf.shape(inputs)[0]), indices], axis=1)
+		result = tf.gather_nd(inputs, nd_indices)
+		return result
