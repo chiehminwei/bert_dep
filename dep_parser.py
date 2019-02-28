@@ -5,30 +5,30 @@ import linalg
 
 class Biaffine(object):
 
-    def __init__(self, x, y, n_in, n_out=1, bias_x=True, bias_y=True):
-        self.n_in = n_in
-        self.n_out = n_out
-        self.bias_x = bias_x
-        self.bias_y = bias_y
-        self.weight = tf.get_variable("biaffine_weight", 
-						        	[n_out, n_in + bias_x, n_in + bias_y], 
-						        	dtype=tf.float32,
-						  			initializer=tf.zeros_initializer)
+	def __init__(self, x, y, n_in, n_out=1, bias_x=True, bias_y=True):
+		self.n_in = n_in
+		self.n_out = n_out
+		self.bias_x = bias_x
+		self.bias_y = bias_y
+		self.weight = tf.get_variable("biaffine_weight", 
+									[n_out, n_in + bias_x, n_in + bias_y], 
+									dtype=tf.float32,
+									initializer=tf.zeros_initializer)
 
-        if self.bias_x:
-            x = tf.concat([x, tf.expand_dims(tf.ones(tf.shape(x)[-1]), -1)], -1)
-        if self.bias_y:
-            y = tf.comcat([y, tf.expand_dims(tf.ones(tf.shape(y)[-1]), -1)], -1)
-        # [batch_size, 1, seq_len, d]
-        x = tf.expand_dims(x, 1)
-        # [batch_size, 1, seq_len, d]
-        y = tf.expand_dims(y, 1)
-        # [batch_size, n_out, seq_len, seq_len]
-        s = x @ self.weight @ tf.transpose(y, perm=[0, 1, 3, 2])
-        # remove dim 1 if n_out == 1
-        s = tf.squeeze(s, 1)
+		if self.bias_x:
+			x = tf.concat([x, tf.expand_dims(tf.ones(tf.shape(x)[-1]), -1)], -1)
+		if self.bias_y:
+			y = tf.comcat([y, tf.expand_dims(tf.ones(tf.shape(y)[-1]), -1)], -1)
+		# [batch_size, 1, seq_len, d]
+		x = tf.expand_dims(x, 1)
+		# [batch_size, 1, seq_len, d]
+		y = tf.expand_dims(y, 1)
+		# [batch_size, n_out, seq_len, seq_len]
+		s = x @ self.weight @ tf.transpose(y, perm=[0, 1, 3, 2])
+		# remove dim 1 if n_out == 1
+		s = tf.squeeze(s, 1)
 
-        return s
+		return s
 
 class Parser(object):
 
@@ -89,15 +89,15 @@ class Parser(object):
 
 	def decode(self, s_arc, s_lab):
 		pred_heads = tf.argmax(s_arc, -1)
-        s_lab = self.select_indices(s_lab, pred_heads)
-        pred_labels = tf.argmax(s_lab, -1)
+		s_lab = self.select_indices(s_lab, pred_heads)
+		pred_labels = tf.argmax(s_lab, -1)
 
-        return pred_heads, pred_labels
+		return pred_heads, pred_labels
 
-    def get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels):
-    	arc_accuracy = tf.metrics.accuracy(gold_heads, pred_heads, self.token_start_mask)
-    	rel_accuracy = tf.metrics.accuracy(gold_labels, pred_labels, self.token_start_mask)
-    	return arc_accuracy, rel_accuracy
+	def get_accuracy(pred_heads, pred_labels, gold_heads, gold_labels):
+		arc_accuracy = tf.metrics.accuracy(gold_heads, pred_heads, self.token_start_mask)
+		rel_accuracy = tf.metrics.accuracy(gold_labels, pred_labels, self.token_start_mask)
+		return arc_accuracy, rel_accuracy
 
 
 	def MLP(self, inputs, mlp_size):
