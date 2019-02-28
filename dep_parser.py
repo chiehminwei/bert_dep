@@ -122,7 +122,8 @@ class Parser(object):
 		# => [batch_size, n_out, seq_len, seq_len]
 		s = x @ self.weight @ tf.transpose(y, perm=[0, 1, 3, 2])
 		# remove dim 1 if n_out == 1
-		s = tf.squeeze(s, 1)
+		if n_out == 1:
+			s = tf.squeeze(s, 1)
 
 		return s
 
