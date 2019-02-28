@@ -129,7 +129,7 @@ class Parser(object):
 
 		return s
 
-	def select_indices(inputs, indices):
+	def select_indices(self, inputs, indices):
 		# inputs = [batch_size, seq_len, seq_len, n_out]
 		# indices = [batch_size, seq_len]
 		# Construct nd_indices
