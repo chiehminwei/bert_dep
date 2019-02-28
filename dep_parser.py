@@ -127,7 +127,7 @@ class Parser(object):
 
 		return s
 
-	def select_indices(inputs, indices):
+	def select_indices(self, inputs, indices):
 		nd_indices = tf.stack([tf.range(tf.shape(inputs)[0]), indices], axis=1)
 		result = tf.gather_nd(inputs, nd_indices)
 		return result
