@@ -383,7 +383,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-								 head_labels_one_hot, rel_labels_one_hot, num_head_labels, num_rel_labels, 
+								 head_label_ids, rel_label_ids, num_head_labels, num_rel_labels, 
 								 use_one_hot_embeddings, token_start_mask, mlp_droupout_rate, arc_mlp_size, label_mlp_size):
 	"""Creates a classification model."""
 	model = modeling.BertModel(
@@ -394,13 +394,12 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 			token_type_ids=segment_ids,
 			use_one_hot_embeddings=use_one_hot_embeddings)
 	embedding = model.get_sequence_output()
-	batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
-	masked_embedding = tf.boolean_mask(embedding, token_start_mask)
+	# batch_size, max_seq_length, embedding_size = modeling.get_shape_list(embedding, expected_rank=3)
 	# lengths = tf.reduce_sum(input_mask, reduction_indices=1)  # [batch_size] vector, sequence lengths of current batch
-	mask = tf.to_float(token_start_mask)
+	# mask = tf.to_float(token_start_mask)
 	
 	parser = Parser(is_training, num_head_labels, num_rel_labels, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size)
-	output = parser(embedding, head_labels, rel_labels)
+	output = parser(embedding, head_label_ids, rel_label_ids)
 	return output
 
 
@@ -425,12 +424,10 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 		is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 		
 		num_head_labels = max_seq_length
-		head_labels_one_hot = tf.one_hot(head_label_ids, num_head_labels)
-		rel_labels_one_hot = tf.one_hot(rel_label_ids, num_rel_labels)
 
 		output = create_model(
-				bert_config, is_training, input_ids, input_mask, segment_ids, head_labels_one_hot,
-				rel_labels_one_hot, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask,
+				bert_config, is_training, input_ids, input_mask, segment_ids, head_label_ids,
+				rel_label_ids, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask,
 				mlp_droupout_rate, arc_mlp_size, label_mlp_size)
 
 		total_loss = output['loss']
