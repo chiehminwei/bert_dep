@@ -493,7 +493,8 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 
 			output_spec = tf.contrib.tpu.TPUEstimatorSpec(
 				 mode=mode,
-				 predictions={"arc_predictions": arc_predictions, "rel_predictions": rel_predictions},
+				 predictions={"arc_predictions": arc_predictions, "rel_predictions": rel_predictions, 
+				 							"head_label_ids": head_label_ids, "rel_label_ids": rel_label_ids},
 				 scaffold_fn=scaffold_fn)
 
 		return output_spec
