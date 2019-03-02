@@ -286,11 +286,11 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 			label_id = 0
 		head_label_ids_for_indexing.append(label_id)
 
-  rel_label_ids_for_indexing = []
-  for label_id in rel_label_ids:
-  	if label_id == -1:
-  		label_id = 0
-  	head_label_ids_for_indexing.append(label_id)
+	rel_label_ids_for_indexing = []
+	for label_id in rel_label_ids:
+		if label_id == -1:
+			label_id = 0
+		head_label_ids_for_indexing.append(label_id)
 
 	if ex_index < 5:
 		tf.logging.info("*** Example ***")
@@ -516,7 +516,7 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 			output_spec = tf.contrib.tpu.TPUEstimatorSpec(
 				 mode=mode,
 				 predictions={"arc_predictions": arc_predictions, "rel_predictions": rel_predictions, 
-				 							"head_label_ids": head_label_ids, "rel_label_ids": rel_label_ids},
+											"head_label_ids": head_label_ids, "rel_label_ids": rel_label_ids},
 				 scaffold_fn=scaffold_fn)
 
 		return output_spec
