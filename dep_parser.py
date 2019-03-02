@@ -22,7 +22,7 @@ class Parser(object):
 		self.batch_size = batch_size
 
 
-	def __call__(self, inputs, gold_heads, gold_labels):
+	def __call__(self, inputs, gold_heads, gold_labels, head_label_ids_for_indexing, rel_label_ids_for_indexing):
 		
 		inputs = tf.layers.dropout(inputs, self.mlp_droput_rate, training=self.is_training)	
 		with tf.variable_scope('arc_h', reuse=tf.AUTO_REUSE):
@@ -54,7 +54,7 @@ class Parser(object):
 
 		output = {}
 		
-		loss = self.get_loss(s_arc, s_lab, gold_heads, gold_labels)
+		loss = self.get_loss(s_arc, s_lab, gold_heads, gold_labels, head_label_ids_for_indexing)
 		output['loss'] = loss
 		
 		if not self.is_training:
@@ -69,8 +69,8 @@ class Parser(object):
 		return output
 		
 
-	def get_loss(self, s_arc, s_lab, gold_heads, gold_labels):
-		s_lab = self.select_indices(s_lab, gold_heads)		
+	def get_loss(self, s_arc, s_lab, gold_heads, gold_labels, head_label_ids_for_indexing):
+		s_lab = self.select_indices(s_lab, head_label_ids_for_indexing)		
 		gold_heads = tf.one_hot(gold_heads, self.num_head_labels)
 		gold_labels = tf.one_hot(gold_labels, self.num_rel_labels)
 		# arc_loss = tf.losses.softmax_cross_entropy(gold_heads, s_arc, weights=self.token_start_mask, label_smoothing=0.9)  
@@ -145,6 +145,25 @@ class Parser(object):
 		nd_indices = tf.stack([batches, seqs, indices], axis=2)
 		result = tf.gather_nd(inputs, nd_indices)
 		return result
+
+
+	def crf_layer(self, logits):
+        """
+        calculate crf loss
+        :param project_logits: [1, num_steps, num_tags]
+        :return: scalar loss
+        """
+        with tf.variable_scope("crf_loss"):
+            trans = tf.get_variable(
+                "transitions",
+                shape=[self.num_labels, self.num_labels],
+                initializer=self.initializers.xavier_initializer())
+            log_likelihood, trans = tf.contrib.crf.crf_log_likelihood(
+                inputs=logits,
+                tag_indices=self.labels,
+                transition_params=trans,
+                sequence_lengths=self.lengths)
+            return tf.reduce_mean(-log_likelihood), trans
 
 
 

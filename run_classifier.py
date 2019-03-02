@@ -176,18 +176,18 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 	"""Converts a single `InputExample` into a single `InputFeatures`."""
 	
 	# -1 is for UNK and [SEP] and [CLS] (root)
-	rel_label_map = defaultdict(lambda: 0)
+	rel_label_map = defaultdict(lambda: -1)
 	for (i, label) in enumerate(rel_label_list):    
 		rel_label_map[label] = i
 
 	# -1 is for index longer than max_seq_length
 	# 0 is for [CLS] (root)
-	head_label_map = defaultdict(lambda: 0)
+	head_label_map = defaultdict(lambda: -1)
 	for (i, label) in enumerate(head_label_list):
 		real_label = int(label)
 		head_label_map[label] = real_label
 		if real_label >= max_seq_length-1:
-				head_label_map[label] = 0
+				head_label_map[label] = -1
 		
 	# The convention in BERT is:
 	# (a) For sequence pairs:
@@ -227,7 +227,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 	head_label_ids.append(0)
 	for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
 		sub_tokens = tokenizer.tokenize(orig_token)
-		rel_label_ids.extend([rel_label_map[rel_label]] + [rel_label_map[rel_label]] * (len(sub_tokens)-1))
+		rel_label_ids.extend([rel_label_map[rel_label]] + [-1] * (len(sub_tokens)-1))
 		token_start_idxs.append(len(bert_tokens))
 		bert_tokens.extend(sub_tokens)
 
@@ -252,7 +252,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 
 	for orig_token, head_label, rel_label in zip(orig_tokens, head_labels, rel_labels):
 		sub_tokens = tokenizer.tokenize(orig_token)
-		head_label_ids.extend([token_map[head_label_map[head_label]]] + [token_map[head_label_map[head_label]]] * (len(sub_tokens)-1))
+		head_label_ids.extend([token_map[head_label_map[head_label]]] + [-1] * (len(sub_tokens)-1))
 		# head_label_ids.extend([token_map[head_label_map[head_label]]] + [len(head_label_ids)-1] * (len(sub_tokens)-1))
 
 
@@ -270,8 +270,8 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 	# Zero-pad up to the sequence length.
 	while len(input_ids) < max_seq_length:
 		input_ids.append(0)
-		rel_label_ids.append(0)
-		head_label_ids.append(0)
+		rel_label_ids.append(-1)
+		head_label_ids.append(-1)
 		input_mask.append(0)
 
 	assert len(input_ids) == max_seq_length
@@ -281,6 +281,18 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 	assert len(rel_label_ids) == max_seq_length
 	assert len(token_start_mask) == max_seq_length
 	
+	head_label_ids_for_indexing = []
+	for label_id in head_label_ids:
+		if label_id == -1: 
+			label_id = 0
+		head_label_ids_for_indexing.append(label_id)
+
+  rel_label_ids_for_indexing = []
+  for label_id in rel_label_ids:
+  	if label_id == -1:
+  		label_id = 0
+  	head_label_ids_for_indexing.append(label_id)
+
 	if ex_index < 5:
 		tf.logging.info("*** Example ***")
 		tf.logging.info("guid: %s" % (example.guid))
@@ -299,6 +311,8 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 			segment_ids=segment_ids,
 			head_label_ids=head_label_ids,
 			rel_label_ids=rel_label_ids,
+			head_label_ids_for_indexing=head_label_ids_for_indexing,
+			rel_label_ids_for_indexing=rel_label_ids_for_indexing,
 			token_start_mask=token_start_mask)
 	return feature
 
@@ -329,6 +343,8 @@ def file_based_convert_examples_to_features(
 		features["segment_ids"] = create_int_feature(feature.segment_ids)
 		features["head_label_ids"] = create_int_feature(feature.head_label_ids)
 		features["rel_label_ids"] = create_int_feature(feature.rel_label_ids)
+		features["head_label_ids_for_indexing"] = create_int_feature(feature.head_label_ids_for_indexing)
+		features["rel_label_ids_for_indexing"] = create_int_feature(feature.rel_label_ids_for_indexing)
 		features["token_start_mask"] = create_int_feature(feature.token_start_mask)
 	 
 		tf_example = tf.train.Example(features=tf.train.Features(feature=features))
@@ -345,6 +361,8 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 			"segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
 			"head_label_ids": tf.FixedLenFeature([seq_length], tf.int64),
 			"rel_label_ids": tf.FixedLenFeature([seq_length], tf.int64),
+			"head_label_ids_for_indexing": tf.FixedLenFeature([seq_length], tf.int64),
+			"rel_label_ids_for_indexing": tf.FixedLenFeature([seq_length], tf.int64),
 			"token_start_mask": tf.FixedLenFeature([seq_length], tf.int64),
 	}
 
@@ -385,7 +403,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-								 head_label_ids, rel_label_ids, num_head_labels, num_rel_labels, 
+								 head_label_ids, rel_label_ids, head_label_ids_for_indexing, rel_label_ids_for_indexing, num_head_labels, num_rel_labels, 
 								 use_one_hot_embeddings, token_start_mask, mlp_droupout_rate, arc_mlp_size, label_mlp_size, batch_size):
 	"""Creates a classification model."""
 	model = modeling.BertModel(
@@ -401,7 +419,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 	# mask = tf.to_float(token_start_mask)
 	
 	parser = Parser(is_training, num_head_labels, num_rel_labels, mlp_droupout_rate, token_start_mask, arc_mlp_size, label_mlp_size, batch_size)
-	output = parser(embedding, head_label_ids, rel_label_ids)
+	output = parser(embedding, head_label_ids, rel_label_ids, head_label_ids_for_indexing, rel_label_ids_for_indexing)
 	return output
 
 
@@ -420,7 +438,9 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 		input_mask = features["input_mask"]
 		segment_ids = features["segment_ids"]
 		head_label_ids = features["head_label_ids"]
+		head_label_ids_for_indexing = features["head_label_ids_for_indexing"]
 		rel_label_ids = features["rel_label_ids"]
+		rel_label_ids_for_indexing = features["rel_label_ids_for_indexing"]
 		token_start_mask = features["token_start_mask"]
 
 		is_training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -429,7 +449,8 @@ def model_fn_builder(bert_config, num_rel_labels, init_checkpoint, learning_rate
 
 		output = create_model(
 				bert_config, is_training, input_ids, input_mask, segment_ids, head_label_ids,
-				rel_label_ids, num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask,
+				rel_label_ids, head_label_ids_for_indexing, rel_label_ids_for_indexing, 
+				num_head_labels, num_rel_labels, use_one_hot_embeddings, token_start_mask,
 				mlp_droupout_rate, arc_mlp_size, label_mlp_size, batch_size)
 
 		total_loss = output['loss']
