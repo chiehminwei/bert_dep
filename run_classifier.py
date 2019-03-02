@@ -308,15 +308,17 @@ def file_based_convert_examples_to_features(
 	"""Convert a set of `InputExample`s to a TFRecord file."""
 
 	writer = tf.python_io.TFRecordWriter(output_file)
-
+  valid = 0
 	for (ex_index, example) in enumerate(examples):
-		if ex_index > 63: break
+		if valid == 64: break
 		if ex_index % 10000 == 0:
 			tf.logging.info("Writing example %d of %d" % (ex_index, len(examples)))
 
 		feature = convert_single_example(ex_index, example, head_label_list, rel_label_list,
 																		 max_seq_length, tokenizer)
 		if not feature: continue
+		else:
+			valid += 1
 
 		def create_int_feature(values):
 			f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
