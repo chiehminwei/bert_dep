@@ -52,14 +52,15 @@ class InputExample(object):
 class InputFeatures(object):
 	"""A single set of features of data."""
 
-	def __init__(self, input_ids, input_mask, segment_ids, head_label_ids, rel_label_ids, token_start_mask):
+	def __init__(self, input_ids, input_mask, segment_ids, head_label_ids, rel_label_ids, head_label_ids_for_indexing, rel_label_ids_for_indexing, token_start_mask):
 		self.input_ids = input_ids
 		self.input_mask = input_mask
 		self.segment_ids = segment_ids
 		self.head_label_ids = head_label_ids
 		self.rel_label_ids = rel_label_ids
+		self.head_label_ids_for_indexing = head_label_ids_for_indexing
+		self.rel_label_ids_for_indexing = rel_label_ids_for_indexing
 		self.token_start_mask = token_start_mask
-
 
 class DataProcessor(object):
 	"""Base class for data converters for sequence classification data sets."""
