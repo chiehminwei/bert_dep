@@ -291,7 +291,7 @@ def convert_single_example(ex_index, example, head_label_list, rel_label_list, m
 	for label_id in rel_label_ids:
 		if label_id == -1:
 			label_id = 0
-		head_label_ids_for_indexing.append(label_id)
+		rel_label_ids_for_indexing.append(label_id)
 
 	if ex_index < 5:
 		tf.logging.info("*** Example ***")
